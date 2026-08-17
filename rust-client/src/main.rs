@@ -2,6 +2,7 @@ mod downloader;
 mod metadata;
 mod progress;
 mod protocol;
+mod tui;
 
 use std::io::ErrorKind;
 use anyhow::Result;
@@ -9,8 +10,6 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use protocol::{NativeMessage, Request, Response};
 
-/// Reads a single native message from an async reader.
-/// Format: 4-byte little-endian length prefix followed by UTF-8 JSON payload.
 async fn read_message<R: AsyncReadExt + Unpin>(reader: &mut R) -> std::io::Result<Option<Vec<u8>>> {
     let mut len_buf = [0u8; 4];
     match reader.read_exact(&mut len_buf).await {
@@ -24,7 +23,6 @@ async fn read_message<R: AsyncReadExt + Unpin>(reader: &mut R) -> std::io::Resul
         return Ok(Some(Vec::new()));
     }
 
-    // Guard against excessively large messages (> 10 MB)
     if len > 10 * 1024 * 1024 {
         return Err(std::io::Error::new(
             ErrorKind::InvalidData,
@@ -37,8 +35,6 @@ async fn read_message<R: AsyncReadExt + Unpin>(reader: &mut R) -> std::io::Resul
     Ok(Some(payload))
 }
 
-/// Writes a single native message to an async writer.
-/// Format: 4-byte little-endian length prefix followed by UTF-8 JSON payload.
 async fn write_message<W: AsyncWriteExt + Unpin, T: serde::Serialize>(
     writer: &mut W,
     msg: &T,
@@ -52,11 +48,9 @@ async fn write_message<W: AsyncWriteExt + Unpin, T: serde::Serialize>(
     Ok(())
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
+async fn run_native_messaging() -> Result<()> {
     let (tx, mut rx) = tokio::sync::mpsc::channel::<NativeMessage<Response>>(128);
 
-    // Spawn a dedicated writer task to ensure synchronous, non-interleaved stdout writes
     let writer_handle = tokio::spawn(async move {
         let mut stdout = tokio::io::stdout();
         while let Some(msg) = rx.recv().await {
@@ -72,10 +66,7 @@ async fn main() -> Result<()> {
     loop {
         let msg_bytes = match read_message(&mut stdin).await {
             Ok(Some(bytes)) => bytes,
-            Ok(None) => {
-                // Extension closed the standard input stream (EOF)
-                break;
-            }
+            Ok(None) => break,
             Err(err) => {
                 eprintln!("Error reading native message: {err}");
                 break;
@@ -86,7 +77,6 @@ async fn main() -> Result<()> {
             continue;
         }
 
-        // Deserialize request with optional correlation ID
         let native_req: Result<NativeMessage<Request>, _> = serde_json::from_slice(&msg_bytes);
 
         let tx = tx.clone();
@@ -100,10 +90,7 @@ async fn main() -> Result<()> {
                             }
                             Err(err) => {
                                 let _ = tx
-                                    .send(NativeMessage::with_id(
-                                        id,
-                                        Response::error(err.to_string()),
-                                    ))
+                                    .send(NativeMessage::with_id(id, Response::error(err.to_string())))
                                     .await;
                             }
                         }
@@ -154,9 +141,22 @@ async fn main() -> Result<()> {
         });
     }
 
-    // Drop original transmitter so writer task completes once all pending responses are flushed
     drop(tx);
     let _ = writer_handle.await;
-
     Ok(())
+}
+
+fn main() -> Result<()> {
+    let args: Vec<String> = std::env::args().collect();
+
+    if args.iter().any(|a| a == "--tui") {
+        let runtime = tokio::runtime::Runtime::new()?;
+        runtime.block_on(async {
+            tui::run_tui()
+        })?;
+        return Ok(());
+    }
+
+    let runtime = tokio::runtime::Runtime::new()?;
+    runtime.block_on(run_native_messaging())
 }

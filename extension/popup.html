@@ -7,108 +7,42 @@
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <div id="app">
-    <!-- Loading state -->
-    <div id="view-loading" class="view active">
-      <div class="spinner"></div>
-      <p>Fetching video info...</p>
-    </div>
+  <h1>YourTube</h1>
 
-    <!-- Metadata view -->
-    <div id="view-metadata" class="view">
-      <div class="header">
-        <h1>YourTube</h1>
-      </div>
-      <div id="video-info">
-        <img id="thumbnail" src="" alt="">
-        <h2 id="title"></h2>
-        <div id="meta-details">
-          <span id="duration"></span>
-          <span id="playlist-info"></span>
-        </div>
-      </div>
+  <div class="field">
+    <label>URL</label>
+    <input type="text" id="url" placeholder="https://youtube.com/watch?v=...">
+  </div>
 
-      <div class="section">
-        <label>Download Type</label>
-        <div class="radio-group">
-          <label class="radio">
-            <input type="radio" name="dl_type" value="video_audio" checked>
-            <span>Video + Audio</span>
-          </label>
-          <label class="radio">
-            <input type="radio" name="dl_type" value="video_only">
-            <span>Video only</span>
-          </label>
-          <label class="radio">
-            <input type="radio" name="dl_type" value="audio_only">
-            <span>Audio only</span>
-          </label>
-        </div>
-      </div>
-
-      <div class="section">
-        <label for="quality">Quality</label>
-        <select id="quality">
-          <option value="2160">2160p (4K)</option>
-          <option value="1440">1440p (2K)</option>
-          <option value="1080" selected>1080p</option>
-          <option value="720">720p</option>
-          <option value="480">480p</option>
-          <option value="360">360p</option>
-        </select>
-      </div>
-
-      <div class="section">
-        <label>Time Range (optional)</label>
-        <div class="time-range">
-          <input type="text" id="start-time" placeholder="00:00:00">
-          <span>to</span>
-          <input type="text" id="end-time" placeholder="end">
-        </div>
-      </div>
-
-      <div class="section">
-        <label for="output-dir">Save to</label>
-        <div class="path-input">
-          <input type="text" id="output-dir" value="">
-          <button id="browse-btn" class="icon-btn" title="Browse">...</button>
-        </div>
-      </div>
-
-      <button id="download-btn" class="primary-btn">Download</button>
-    </div>
-
-    <!-- Progress view -->
-    <div id="view-progress" class="view">
-      <div class="header">
-        <h1>YourTube</h1>
-      </div>
-      <div id="progress-content">
-        <h2 id="dl-title"></h2>
-        <div class="progress-bar-container">
-          <div id="progress-bar" class="progress-bar"></div>
-        </div>
-        <div id="progress-percent">0%</div>
-        <div id="progress-details">
-          <span id="progress-size"></span>
-          <span id="progress-speed"></span>
-          <span id="progress-eta"></span>
-        </div>
-        <div id="progress-status"></div>
-      </div>
-    </div>
-
-    <!-- Error view -->
-    <div id="view-error" class="view">
-      <div class="header">
-        <h1>YourTube</h1>
-      </div>
-      <div class="error-content">
-        <p id="error-message"></p>
-        <button id="retry-btn" class="primary-btn">Try Again</button>
-      </div>
+  <div class="field">
+    <label>Download Type</label>
+    <div class="radios">
+      <label><input type="radio" name="dl_type" value="video_audio" checked> Video + Audio</label>
+      <label><input type="radio" name="dl_type" value="video_only"> Video only</label>
+      <label><input type="radio" name="dl_type" value="audio_only"> Audio only</label>
     </div>
   </div>
+
+  <div class="field">
+    <label>Quality</label>
+    <select id="quality">
+      <option value="2160">2160p (4K)</option>
+      <option value="1440">1440p (2K)</option>
+      <option value="1080" selected>1080p</option>
+      <option value="720">720p</option>
+      <option value="480">480p</option>
+      <option value="360">360p</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label>Save to</label>
+    <input type="text" id="output-dir" value="/home/mori/Videos">
+  </div>
+
+  <button id="go-btn">Fetch Info</button>
+
+  <div id="status" class="hidden"></div>
 
   <script src="popup.js"></script>
 </body>

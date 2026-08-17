@@ -127,6 +127,8 @@ pub async fn fetch_metadata(url: &str) -> Result<Response> {
     let output = Command::new(&yt_dlp_bin)
         .arg("--dump-single-json")
         .arg("--no-download")
+        .arg("--js-runtimes")
+        .arg("node")
         .arg(url)
         .output()
         .await

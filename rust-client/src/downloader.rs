@@ -122,6 +122,7 @@ where
 
     let mut cmd = Command::new(&yt_dlp_bin);
     cmd.args(&args);
+    cmd.arg("--js-runtimes").arg("node");
     cmd.stdout(Stdio::piped());
     cmd.stderr(Stdio::piped());
 

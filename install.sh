@@ -4,19 +4,26 @@ set -euo pipefail
 HOST_NAME="com.yourtube.client"
 INSTALL_DIR="$HOME/.local/bin"
 BINARY_NAME="yourtube-client"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo "=== YourTube Installer ==="
+echo ""
 
 # 1. Build Rust client
-echo "[1/3] Building Rust client..."
-cd "$(dirname "$0")/rust-client"
-cargo build --release
+echo "[1/4] Building Rust client..."
+cd "$SCRIPT_DIR/rust-client"
+cargo build --release 2>&1 | tail -1
 mkdir -p "$INSTALL_DIR"
 cp "target/release/$BINARY_NAME" "$INSTALL_DIR/$BINARY_NAME"
 chmod +x "$INSTALL_DIR/$BINARY_NAME"
-echo "  Binary installed to $INSTALL_DIR/$BINARY_NAME"
+cp "yt-dlp" "$INSTALL_DIR/yt-dlp"
+chmod +x "$INSTALL_DIR/yt-dlp"
+echo "  -> $INSTALL_DIR/$BINARY_NAME"
+echo "  -> $INSTALL_DIR/yt-dlp"
 
-# 2. Chrome native messaging host manifest
+# 2. Chrome / Chromium
+echo ""
+echo "[2/4] Registering native messaging host for Chrome..."
 CHROME_DIR="$HOME/.config/google-chrome/NativeMessagingHosts"
 mkdir -p "$CHROME_DIR"
 cat > "$CHROME_DIR/$HOST_NAME.json" <<EOF
@@ -30,20 +37,21 @@ cat > "$CHROME_DIR/$HOST_NAME.json" <<EOF
   ]
 }
 EOF
-echo "  Chrome manifest: $CHROME_DIR/$HOST_NAME.json"
+echo "  -> $CHROME_DIR/$HOST_NAME.json"
 
-# 3. Chromium-based browsers (Brave, Vivaldi, etc.)
-for BROWSER_DIR in "$HOME/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts" \
-                    "$HOME/.config/vivaldi/NativeMessagingHosts" \
-                    "$HOME/.config/chromium/NativeMessagingHosts"; do
-  if [ -d "$(dirname "$BROWSER_DIR")" ]; then
-    mkdir -p "$BROWSER_DIR"
-    cp "$CHROME_DIR/$HOST_NAME.json" "$BROWSER_DIR/$HOST_NAME.json"
-    echo "  Also installed to $BROWSER_DIR"
+for DIR in "$HOME/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts" \
+           "$HOME/.config/vivaldi/NativeMessagingHosts" \
+           "$HOME/.config/chromium/NativeMessagingHosts"; do
+  if [ -d "$(dirname "$DIR")" ]; then
+    mkdir -p "$DIR"
+    cp "$CHROME_DIR/$HOST_NAME.json" "$DIR/$HOST_NAME.json"
+    echo "  -> $DIR/$HOST_NAME.json"
   fi
 done
 
-# 4. Firefox native messaging host manifest
+# 3. Firefox
+echo ""
+echo "[3/4] Registering native messaging host for Firefox..."
 FIREFOX_DIR="$HOME/.mozilla/native-messaging-hosts"
 mkdir -p "$FIREFOX_DIR"
 cat > "$FIREFOX_DIR/$HOST_NAME.json" <<EOF
@@ -51,19 +59,32 @@ cat > "$FIREFOX_DIR/$HOST_NAME.json" <<EOF
   "name": "$HOST_NAME",
   "description": "YourTube yt-dlp client",
   "path": "$INSTALL_DIR/$BINARY_NAME",
-  "type": "stdio"
+  "type": "stdio",
+  "allowed_extensions": ["yourtube@shirushimori"]
 }
 EOF
-echo "  Firefox manifest: $FIREFOX_DIR/$HOST_NAME.json"
+echo "  -> $FIREFOX_DIR/$HOST_NAME.json"
+
+# 4. Test the client
+echo ""
+echo "[4/4] Testing native messaging client..."
+TEST_MSG='{"type":"fetch_metadata","url":"https://www.youtube.com/watch?v=dQw4w9WgXcQ"}'
+TEST_LEN=${#TEST_MSG}
+TEST_RESP=$(printf "\\x$(printf '%02x' $((TEST_LEN & 0xFF)))\\x$(printf '%02x' $(((TEST_LEN >> 8) & 0xFF)))\\x$(printf '%02x' $(((TEST_LEN >> 16) & 0xFF)))\\x$(printf '%02x' $(((TEST_LEN >> 24) & 0xFF)))" | cat - <(echo "$TEST_MSG") | timeout 15 "$INSTALL_DIR/$BINARY_NAME" 2>/dev/null || echo '{"type":"error","message":"test failed"}')
+
+if echo "$TEST_RESP" | grep -q '"type":"metadata"'; then
+  TEST_TITLE=$(echo "$TEST_RESP" | grep -o '"title":"[^"]*"' | head -1 | cut -d'"' -f4)
+  echo "  -> OK: $TEST_TITLE"
+else
+  echo "  -> WARN: client responded with: $TEST_RESP"
+fi
 
 echo ""
-echo "=== Done ==="
+echo "=== Installed ==="
 echo ""
-echo "Next steps:"
-echo "  1. Open Chrome/Firefox"
-echo "  2. Go to chrome://extensions or about:debugging"
-echo "  3. Enable Developer Mode"
-echo "  4. Click 'Load unpacked' and select the extension/ folder"
-echo "  5. The extension ID will appear - update allowed_origins in the manifest:"
-echo "     $CHROME_DIR/$HOST_NAME.json"
-echo "  6. Re-run this script after updating the extension ID"
+echo "To use:"
+echo "  1. Load extension/ in your browser"
+echo "     Chrome:  chrome://extensions -> Load unpacked -> select extension/"
+echo "     Firefox: about:debugging -> Load Temporary Add-on -> select extension/manifest.json"
+echo ""
+echo "  2. Open a YouTube video and click the YourTube button"
