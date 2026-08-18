@@ -12,6 +12,12 @@
   function getVideoUrl() { return location.href; }
   function getVideoId() { const m = location.href.match(/[?&]v=([^&]+)/); return m ? m[1] : null; }
 
+  function setSafeHtml(el, html) {
+    el.replaceChildren();
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    el.append(...doc.body.childNodes);
+  }
+
   // ── Helpers ──
   function escapeHtml(str) {
     const d = document.createElement("div"); d.textContent = str || ""; return d.innerHTML;
@@ -88,7 +94,7 @@
     if (document.getElementById(TOAST_ID)) return;
     const t = document.createElement("div");
     t.id = TOAST_ID;
-    t.innerHTML = `<div class="toast-title"></div><div class="toast-progress"><div class="toast-bar"></div></div><div class="toast-details"><span class="toast-pct"></span><span class="toast-speed"></span><span class="toast-eta"></span></div>`;
+    setSafeHtml(t, `<div class="toast-title"></div><div class="toast-progress"><div class="toast-bar"></div></div><div class="toast-details"><span class="toast-pct"></span><span class="toast-speed"></span><span class="toast-eta"></span></div>`);
     document.body.appendChild(t);
   }
   function showToast(title) {
@@ -114,7 +120,7 @@
 
     const popup = document.createElement("div");
     popup.id = VIDEO_POPUP_ID;
-    popup.innerHTML = `
+    setSafeHtml(popup, `
       <div class="yt-vp-panel">
         <div class="yt-vp-header">
           <div class="yt-vp-title">
@@ -137,7 +143,7 @@
           ${meta.source ? `<div class="yt-vp-source"><a href="${escapeHtml(meta.source)}" target="_blank" rel="noopener">${escapeHtml(meta.source)}</a></div>` : ""}
         </div>` : ""}
       </div>
-    `;
+    `);
     document.body.appendChild(popup);
 
     popup.querySelector(".yt-vp-close").addEventListener("click", () => {
@@ -153,7 +159,7 @@
     if (document.getElementById(OVERLAY_ID)) return;
     const o = document.createElement("div");
     o.id = OVERLAY_ID;
-    o.innerHTML = `
+    setSafeHtml(o, `
       <div id="yourtube-popup">
         <div class="yt-header"><h2>Download</h2><button class="yt-close">&times;</button></div>
         <div class="yt-body">
@@ -190,7 +196,7 @@
           <div class="yt-status"></div>
         </div>
       </div>
-    `;
+    `);
     document.body.appendChild(o);
     o.querySelector(".yt-close").addEventListener("click", () => o.classList.remove("visible"));
     o.addEventListener("click", (e) => { if (e.target === o) o.classList.remove("visible"); });
@@ -282,7 +288,7 @@
     if (document.getElementById(HUB_ID)) return;
     const hub = document.createElement("div");
     hub.id = HUB_ID;
-    hub.innerHTML = `
+    setSafeHtml(hub, `
       <div class="yt-hub-panel">
         <div class="yt-hub-header">
           <h2>Downloads Hub</h2>
@@ -315,7 +321,7 @@
         </div>
         <div class="yt-hub-empty hidden">No downloads found</div>
       </div>
-    `;
+    `);
     document.body.appendChild(hub);
 
     // Fullscreen state
@@ -384,12 +390,12 @@
     const allList = hub.querySelector("#yt-hub-all");
     const empty = hub.querySelector(".yt-hub-empty");
 
-    allList.innerHTML = '<div class="yt-hub-loading">Loading...</div>';
+    setSafeHtml(allList, '<div class="yt-hub-loading">Loading...</div>');
     empty.classList.add("hidden");
 
     const result = await chrome.runtime.sendMessage({ type: "list_downloads", directory: dir });
     if (!result || result.type === "error") {
-      allList.innerHTML = `<div class="yt-hub-error">${(result && result.message) || "Failed to load"}</div>`;
+      setSafeHtml(allList, `<div class="yt-hub-error">${(result && result.message) || "Failed to load"}</div>`);
       return;
     }
 
@@ -406,9 +412,9 @@
     const videoFiles = hubFileList.filter((f) => getMediaType(f.ext) === "video");
     const audioFiles = hubFileList.filter((f) => getMediaType(f.ext) === "audio");
 
-    allList.innerHTML = renderFileItems(hubFileList);
-    videoList.innerHTML = renderFileItems(videoFiles);
-    audioList.innerHTML = renderFileItems(audioFiles);
+    setSafeHtml(allList, renderFileItems(hubFileList));
+    setSafeHtml(videoList, renderFileItems(videoFiles));
+    setSafeHtml(audioList, renderFileItems(audioFiles));
 
     // Attach click handlers
     [allList, videoList, audioList].forEach((list) => {
@@ -493,7 +499,7 @@
 
     const result = await chrome.runtime.sendMessage({ type: "serve_file", path });
 
-    if (playBtn) { playBtn.disabled = false; playBtn.innerHTML = "&#9654;"; }
+    if (playBtn) { playBtn.disabled = false; setSafeHtml(playBtn, "&#9654;"); }
     if (!result || result.type === "error") { alert("Failed: " + (result?.message || "Unknown")); return; }
 
     if (hubOpenMode === "tab") {
@@ -514,7 +520,7 @@
       hubTracked = result?.downloads || [];
       renderTrackedList();
     } catch {
-      list.innerHTML = '<div class="yt-hub-error">Failed to load</div>';
+      setSafeHtml(list, '<div class="yt-hub-error">Failed to load</div>');
     }
   }
 
@@ -529,9 +535,9 @@
         return true;
       });
 
-    if (filtered.length === 0) { list.innerHTML = '<div class="yt-hub-empty-inline">No tracked downloads</div>'; applyFilter(); return; }
+    if (filtered.length === 0) { setSafeHtml(list, '<div class="yt-hub-empty-inline">No tracked downloads</div>'); applyFilter(); return; }
 
-    list.innerHTML = filtered.map((d) => `
+    setSafeHtml(list, filtered.map((d) => `
       <div class="yt-hub-item tracked ${d.status}" data-url="${escapeHtml(d.url)}" data-id="${d.id || ""}">
         <div class="yt-hub-item-inner">
           ${d.thumbnail ? `<img class="yt-hub-thumb" src="${escapeHtml(d.thumbnail)}" alt="">` : `<div class="yt-hub-icon">${d.status === "completed" ? "&#10003;" : "&#9654;"}</div>`}
@@ -549,7 +555,7 @@
           <button class="yt-hub-play-btn" title="Open">&#8599;</button>
         </div>
       </div>
-    `).join("");
+    `).join(""));
 
     list.querySelectorAll(".yt-hub-item.tracked").forEach((item) => {
       item.addEventListener("click", (e) => {
@@ -587,7 +593,7 @@
       const playlists = result?.playlists || [];
       renderPlaylists(playlists);
     } catch {
-      list.innerHTML = '<div class="yt-hub-error">Failed to load playlists</div>';
+      setSafeHtml(list, '<div class="yt-hub-error">Failed to load playlists</div>');
     }
   }
 
@@ -603,13 +609,13 @@
     `;
 
     if (playlists.length === 0) {
-      list.innerHTML = header + '<div class="yt-hub-empty-inline">No playlists yet</div>';
+      setSafeHtml(list, header + '<div class="yt-hub-empty-inline">No playlists yet</div>');
       attachPlaylistHandlers([]);
       applyFilter();
       return;
     }
 
-    list.innerHTML = header + playlists.map((pl) => `
+    setSafeHtml(list, header + playlists.map((pl) => `
       <div class="yt-hub-playlist-card" data-id="${pl.id}">
         <div class="yt-hub-playlist-header">
           <span class="yt-hub-playlist-name">${escapeHtml(pl.name)}</span>
@@ -629,7 +635,7 @@
           ${(pl.items || []).length > 5 ? `<div class="yt-hub-pl-more">+${pl.items.length - 5} more</div>` : ""}
         </div>
       </div>
-    `).join("");
+    `).join(""));
 
     attachPlaylistHandlers(playlists);
     applyFilter();
@@ -760,7 +766,7 @@
     if (!nav) return;
     const btn = document.createElement("div");
     btn.id = HUB_BTN_ID;
-    btn.innerHTML = `<a class="yt-simple-endpoint style-scope ytd-guide-entry-renderer" tabindex="0"><tp-yt-paper-item class="style-scope ytd-guide-entry-renderer" tabindex="0"><ytd-badge-supported-renderer class="style-scope ytd-guide-entry-renderer" style="display: none;"></ytd-badge-supported-renderer><div class="guide-entry-maker style-scope ytd-guide-entry-renderer" title="Downloads Hub"><span style="margin-right: 16px;">&#128229;</span><yt-formatted-string class="style-scope ytd-guide-entry-renderer">Downloads</yt-formatted-string></div></tp-yt-paper-item></a>`;
+    setSafeHtml(btn, `<a class="yt-simple-endpoint style-scope ytd-guide-entry-renderer" tabindex="0"><tp-yt-paper-item class="style-scope ytd-guide-entry-renderer" tabindex="0"><ytd-badge-supported-renderer class="style-scope ytd-guide-entry-renderer" style="display: none;"></ytd-badge-supported-renderer><div class="guide-entry-maker style-scope ytd-guide-entry-renderer" title="Downloads Hub"><span style="margin-right: 16px;">&#128229;</span><yt-formatted-string class="style-scope ytd-guide-entry-renderer">Downloads</yt-formatted-string></div></tp-yt-paper-item></a>`);
     btn.style.cursor = "pointer";
     btn.addEventListener("click", (e) => {
       e.preventDefault(); e.stopPropagation();
@@ -780,7 +786,7 @@
     const section = document.createElement("div");
     section.id = "yourtube-dl-section";
     section.className = "yourtube-dl-section";
-    section.innerHTML = `
+    setSafeHtml(section, `
       <div class="yourtube-dl-header"><h2>YourTube</h2><button class="yourtube-dl-open-hub">Open Hub</button></div>
       <div class="yourtube-dl-body">
         <p>Download videos directly from YouTube using YourTube.</p>
@@ -789,7 +795,7 @@
           <button class="yourtube-dl-hub-btn">Browse Downloads</button>
         </div>
       </div>
-    `;
+    `);
     const contents = renderer.querySelector("#contents") || renderer;
     contents.insertBefore(section, contents.firstChild);
 
