@@ -1,3 +1,5 @@
+NOTE : All setups, and docs are written by AI. still... it's good.
+
 # 👋 Hey there, welcome to YourTube!
 
 I built YourTube because I wanted a completely offline, ad-free, and tracker-free way to download YouTube videos directly from my browser. No shady websites, no slow servers—just a clean, native experience running right on your machine!
