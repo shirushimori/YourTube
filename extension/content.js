@@ -756,7 +756,7 @@
       if (dur) document.querySelector(".yt-detail").textContent = dur.textContent;
       document.getElementById(OVERLAY_ID).classList.add("visible");
     });
-    row.appendChild(btn);
+    row.insertBefore(btn, row.firstChild);
   }
 
   // ── Hook: Hub button in sidebar ──

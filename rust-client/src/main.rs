@@ -1,5 +1,6 @@
 mod downloader;
 mod file_server;
+mod installer;
 mod list_downloads;
 mod metadata;
 mod progress;
@@ -132,8 +133,12 @@ async fn run_native_messaging() -> Result<()> {
                         }
                     }
                     Request::ListDownloads { directory } => {
+                        let default_dir = dirs::video_dir()
+                            .unwrap_or_else(|| dirs::document_dir().unwrap_or_else(|| std::path::PathBuf::from(".")))
+                            .to_string_lossy()
+                            .into_owned();
                         let dir = directory.as_deref()
-                            .unwrap_or("/home/mori/Videos");
+                            .unwrap_or(&default_dir);
                         match list_downloads::list_downloads(dir) {
                             Ok(resp) => {
                                 let _ = tx.send(NativeMessage::with_id(id, resp)).await;
@@ -180,6 +185,14 @@ async fn run_native_messaging() -> Result<()> {
 
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
+
+    if args.iter().any(|a| a == "--install") {
+        let runtime = tokio::runtime::Runtime::new()?;
+        runtime.block_on(async {
+            installer::install().await
+        })?;
+        return Ok(());
+    }
 
     if args.iter().any(|a| a == "--tui") {
         let runtime = tokio::runtime::Runtime::new()?;
