@@ -38,7 +38,7 @@ It's super simple:
 3. Pick whether you want just audio, video, or both, choose your quality, and hit download.
 4. By default, everything saves straight to your `~/Videos` folder.
 
-### 🤓 For the Power Users
+### 🤓 For the Power Users (dosn't works, if you are a developer then you can help me fixx all issues...)
 
 Want to see all your downloads in one place? Just run:
 ```bash
