@@ -41,6 +41,15 @@ pub enum Request {
         #[serde(default, alias = "endTime", skip_serializing_if = "Option::is_none")]
         end_time: Option<String>,
     },
+    #[serde(alias = "listDownloads", alias = "list_downloads")]
+    ListDownloads {
+        #[serde(default, alias = "dir", skip_serializing_if = "Option::is_none")]
+        directory: Option<String>,
+    },
+    #[serde(alias = "serveFile", alias = "serve_file")]
+    ServeFile {
+        path: String,
+    },
 }
 
 fn default_download_type() -> String {
@@ -55,9 +64,21 @@ pub enum Response {
     Metadata {
         title: String,
         #[serde(skip_serializing_if = "Option::is_none")]
+        description: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
         duration: Option<f64>,
         #[serde(skip_serializing_if = "Option::is_none")]
         thumbnail: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        view_count: Option<u64>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        like_count: Option<u64>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        channel: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        upload_date: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        source: Option<String>,
         formats: Vec<FormatInfo>,
     },
     #[serde(rename = "download_progress", alias = "progress", alias = "downloadProgress")]
@@ -77,6 +98,16 @@ pub enum Response {
     #[serde(rename = "error")]
     Error {
         message: String,
+    },
+    #[serde(rename = "downloads_list", alias = "downloadsList")]
+    DownloadsList {
+        directory: String,
+        files: Vec<DownloadFile>,
+    },
+    #[serde(rename = "file_served", alias = "fileServed")]
+    FileServed {
+        url: String,
+        path: String,
     },
 }
 
@@ -104,6 +135,17 @@ pub struct FormatInfo {
     pub vcodec: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub acodec: Option<String>,
+}
+
+/// A single downloaded file entry.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct DownloadFile {
+    pub name: String,
+    pub path: String,
+    pub size: u64,
+    pub modified: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ext: Option<String>,
 }
 
 #[cfg(test)]
@@ -158,8 +200,14 @@ mod tests {
             msg.id,
             Response::Metadata {
                 title: "Test Video".to_string(),
+                description: None,
                 duration: Some(120.0),
                 thumbnail: Some("https://example.com/thumb.jpg".to_string()),
+                view_count: None,
+                like_count: None,
+                channel: None,
+                upload_date: None,
+                source: None,
                 formats: vec![],
             },
         );

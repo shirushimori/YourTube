@@ -3,8 +3,14 @@
   "name": "YourTube",
   "version": "2.0.0",
   "description": "Download YouTube videos with yt-dlp",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "yourtube@shirushimori",
+      "strict_min_version": "109.0"
+    }
+  },
   "permissions": ["activeTab", "nativeMessaging", "storage"],
-  "host_permissions": ["*://*.youtube.com/*"],
+  "host_permissions": ["*://*.youtube.com/*", "http://127.0.0.1/*"],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {

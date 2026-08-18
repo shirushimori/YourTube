@@ -1,4 +1,6 @@
 mod downloader;
+mod file_server;
+mod list_downloads;
 mod metadata;
 mod progress;
 mod protocol;
@@ -127,6 +129,36 @@ async fn run_native_messaging() -> Result<()> {
                             let _ = tx
                                 .send(NativeMessage::with_id(id, Response::error(err.to_string())))
                                 .await;
+                        }
+                    }
+                    Request::ListDownloads { directory } => {
+                        let dir = directory.as_deref()
+                            .unwrap_or("/home/mori/Videos");
+                        match list_downloads::list_downloads(dir) {
+                            Ok(resp) => {
+                                let _ = tx.send(NativeMessage::with_id(id, resp)).await;
+                            }
+                            Err(err) => {
+                                let _ = tx
+                                    .send(NativeMessage::with_id(id, Response::error(err.to_string())))
+                                    .await;
+                            }
+                        }
+                    }
+                    Request::ServeFile { path } => {
+                        match file_server::start_file_server(&path).await {
+                            Ok(server) => {
+                                let url = format!("http://127.0.0.1:{}/video", server.addr().port());
+                                let _ = tx.send(NativeMessage::with_id(id, Response::FileServed {
+                                    url,
+                                    path,
+                                })).await;
+                            }
+                            Err(err) => {
+                                let _ = tx
+                                    .send(NativeMessage::with_id(id, Response::error(err.to_string())))
+                                    .await;
+                            }
                         }
                     }
                 },

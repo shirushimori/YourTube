@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use std::path::PathBuf;
 use anyhow::{Context, Result};
 use serde::Deserialize;
@@ -27,9 +28,17 @@ struct YtDlpFormat {
 #[derive(Debug, Deserialize)]
 struct YtDlpOutput {
     title: Option<String>,
+    description: Option<String>,
     duration: Option<f64>,
     thumbnail: Option<String>,
     thumbnails: Option<Vec<YtDlpThumbnail>>,
+    view_count: Option<u64>,
+    like_count: Option<u64>,
+    channel: Option<String>,
+    uploader: Option<String>,
+    upload_date: Option<String>,
+    webpage_url: Option<String>,
+    extractor: Option<String>,
     formats: Option<Vec<YtDlpFormat>>,
 }
 
@@ -114,8 +123,14 @@ pub fn parse_metadata_json(json_bytes: &[u8]) -> Result<Response> {
 
     Ok(Response::Metadata {
         title: parsed.title.unwrap_or_else(|| "Unknown Title".to_string()),
+        description: parsed.description,
         duration: parsed.duration,
         thumbnail,
+        view_count: parsed.view_count,
+        like_count: parsed.like_count,
+        channel: parsed.channel.or(parsed.uploader),
+        upload_date: parsed.upload_date,
+        source: parsed.webpage_url,
         formats,
     })
 }
@@ -129,6 +144,8 @@ pub async fn fetch_metadata(url: &str) -> Result<Response> {
         .arg("--no-download")
         .arg("--js-runtimes")
         .arg("node")
+        .arg("--extractor-args").arg("youtube:player_client=web_creator,web")
+        .arg("--cookies-from-browser").arg("firefox")
         .arg(url)
         .output()
         .await
@@ -181,6 +198,7 @@ mod tests {
                 duration,
                 thumbnail,
                 formats,
+                ..
             } => {
                 assert_eq!(title, "Example Video");
                 assert_eq!(duration, Some(182.5));

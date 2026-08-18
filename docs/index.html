@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YourTube - The Ultimate Local YouTube Downloader</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="hero">
+        <div class="container">
+            <h1 class="logo">YourTube</h1>
+            <p class="tagline">Clean, fast, and runs entirely on your machine.<br>No servers. No ads. No nonsense.</p>
+            <div class="hero-buttons">
+                <a href="#installation" class="btn primary-btn">Install on Desktop</a>
+                <a href="https://github.com/JunkFood02/Seal" target="_blank" rel="noopener" class="btn secondary-btn">
+                    <svg class="android-icon" viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                        <path d="M17.523 15.3414C17.523 15.867 17.0945 16.2954 16.5689 16.2954C16.0434 16.2954 15.6149 15.867 15.6149 15.3414C15.6149 14.8159 16.0434 14.3874 16.5689 14.3874C17.0945 14.3874 17.523 14.8159 17.523 15.3414ZM7.43105 16.2954C6.90545 16.2954 6.477 15.867 6.477 15.3414C6.477 14.8159 6.90545 14.3874 7.43105 14.3874C7.95665 14.3874 8.3851 14.8159 8.3851 15.3414C8.3851 15.867 7.95665 16.2954 7.43105 16.2954ZM17.7028 10.3702L19.3491 7.51868C19.4589 7.32832 19.3934 7.08502 19.203 6.9752C19.0127 6.86538 18.7694 6.93084 18.6596 7.1212L16.9696 10.0487C15.421 9.34444 13.7381 9 12 9C10.2619 9 8.57905 9.34444 7.03045 10.0487L5.34045 7.1212C5.2306 6.93084 4.9873 6.86538 4.79695 6.9752C4.6066 7.08502 4.54115 7.32832 4.65095 7.51868L6.2972 10.3702C2.7303 12.338 0.31505 16.0301 0 20.3644H24C23.6849 16.0301 21.2697 12.338 17.7028 10.3702Z"/>
+                    </svg>
+                    Install on Android (Seal)
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="features">
+            <div class="feature-card">
+                <h3>Native Integration</h3>
+                <p>Injects a sleek download button directly into YouTube's player via a browser extension.</p>
+            </div>
+            <div class="feature-card">
+                <h3>Powered by yt-dlp</h3>
+                <p>Downloads videos up to 4K using the robust yt-dlp engine seamlessly.</p>
+            </div>
+            <div class="feature-card">
+                <h3>Zero Tracking</h3>
+                <p>No analytics, no ads, completely open source and runs entirely offline on your machine.</p>
+            </div>
+        </section>
+
+        <section id="installation" class="setup-section">
+            <h2>Desktop Installation Guide</h2>
+            <p>To use YourTube on your desktop (Linux/Windows), follow the automated setup process.</p>
+            
+            <div class="code-block">
+                <h3>1. Clone the repository</h3>
+                <pre><code>git clone https://github.com/shirushimori/YourTube.git
+cd YourTube</code></pre>
+            </div>
+
+            <div class="code-block">
+                <h3>2. Run the automated installer</h3>
+                <p>Make sure you have <code>cargo</code>, <code>curl</code>, and <code>zip</code> installed.</p>
+                <pre><code>./run.sh</code></pre>
+            </div>
+
+            <div class="code-block">
+                <h3>3. Load the Extension</h3>
+                <p>The installer creates a <code>yourtube-extension.zip</code> file.</p>
+                <ul>
+                    <li><strong>Firefox:</strong> Go to <code>about:debugging#/runtime/this-firefox</code>, click "Load Temporary Add-on", and select the zip file.</li>
+                    <li><strong>Chrome/Edge:</strong> Extract the zip, go to <code>chrome://extensions</code>, enable "Developer mode", click "Load unpacked", and select the extracted folder.</li>
+                </ul>
+            </div>
+        </section>
+
+        <section class="support-section">
+            <h2>Supported Linux Distributions</h2>
+            <p>YourTube's installer script works natively on any Linux distribution that supports <code>cargo</code> and standard shell utilities.</p>
+            <div class="distro-list">
+                <span class="distro-badge">Ubuntu / Debian</span>
+                <span class="distro-badge">Arch Linux / Manjaro</span>
+                <span class="distro-badge">Fedora</span>
+                <span class="distro-badge">Linux Mint</span>
+                <span class="distro-badge">Pop!_OS</span>
+                <span class="distro-badge">openSUSE</span>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>YourTube is open source software. Crafted with precision.</p>
+        </div>
+    </footer>
+</body>
+</html>

@@ -123,6 +123,8 @@ where
     let mut cmd = Command::new(&yt_dlp_bin);
     cmd.args(&args);
     cmd.arg("--js-runtimes").arg("node");
+    cmd.arg("--extractor-args").arg("youtube:player_client=web_creator,web");
+    cmd.arg("--cookies-from-browser").arg("firefox");
     cmd.stdout(Stdio::piped());
     cmd.stderr(Stdio::piped());
 
