@@ -231,20 +231,23 @@
 
 /* Hook button near YouTube's action buttons */
 #yourtube-hook-btn {
-  background: #f1f1f1;
-  color: #0f0f0f;
+  background: rgba(255, 255, 255, 0.1);
+  color: #f1f1f1;
   border: none;
-  border-radius: 20px;
-  padding: 8px 16px;
+  border-radius: 18px;
+  padding: 0 16px;
+  height: 36px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  font-family: Roboto, Arial, sans-serif;
-  margin-left: 8px;
-  transition: background 0.15s;
+  font-family: "Roboto", "Arial", sans-serif;
+  margin-right: 8px; /* Margin right since we insert BEFORE the like button */
+  display: flex;
+  align-items: center;
+  transition: background 0.2s;
 }
 #yourtube-hook-btn:hover {
-  background: #e0e0e0;
+  background: rgba(255, 255, 255, 0.2);
 }
 
 /* Download progress toast */

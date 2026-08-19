@@ -293,8 +293,6 @@
         <div class="yt-hub-header">
           <h2>Downloads Hub</h2>
           <div class="yt-hub-header-actions">
-            <div class="yt-hub-toggle"><button class="yt-hub-mode active" data-mode="tab">Tab</button><button class="yt-hub-mode" data-mode="popup">Popup</button></div>
-            <button class="yt-hub-fullscreen" title="Fullscreen">&#9974;</button>
             <button class="yt-hub-close">&times;</button>
           </div>
         </div>
@@ -744,7 +742,7 @@
 
     const btn = document.createElement("button");
     btn.id = HOOK_BTN_ID;
-    btn.textContent = "Download";
+    setSafeHtml(btn, `<svg viewBox="0 0 24 24" width="20" height="20" style="fill: currentColor; margin-right: 6px;"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>Download`);
     btn.addEventListener("click", (e) => {
       e.preventDefault(); e.stopPropagation();
       ensureOverlay();
