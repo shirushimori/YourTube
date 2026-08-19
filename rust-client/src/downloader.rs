@@ -38,7 +38,12 @@ pub fn build_yt_dlp_args(
     start_time: Option<&str>,
     end_time: Option<&str>,
 ) -> Vec<String> {
-    let mut args = vec!["--newline".to_string(), "--no-warnings".to_string()];
+    let mut args = vec![
+        "--newline".to_string(),
+        "--no-warnings".to_string(),
+        "--js-runtimes".to_string(),
+        "node".to_string(),
+    ];
 
     match download_type {
         "audio_only" => {
@@ -58,10 +63,10 @@ pub fn build_yt_dlp_args(
             if let Some(height) = quality.and_then(sanitize_quality) {
                 args.extend([
                     "-f".to_string(),
-                    format!("bv*[height<={height}]/bv*/b"),
+                    format!("bv*[height<={height}]+ba/b[height<={height}]/bv*[height<={height}]/b[height<={height}]/bv*/b"),
                 ]);
             } else {
-                args.extend(["-f".to_string(), "bv*/b".to_string()]);
+                args.extend(["-f".to_string(), "bv*+ba/bv*/b".to_string()]);
             }
         }
         _ => {
@@ -69,10 +74,10 @@ pub fn build_yt_dlp_args(
             if let Some(height) = quality.and_then(sanitize_quality) {
                 args.extend([
                     "-f".to_string(),
-                    format!("bv*[height<={height}]+ba/b[height<={height}]/bv*+ba/b"),
+                    format!("bv*[height<={height}]+ba/b[height<={height}]/bv*[height<={height}]/b[height<={height}]/bv*+ba/b/best"),
                 ]);
             } else {
-                args.extend(["-f".to_string(), "bv*+ba/b".to_string()]);
+                args.extend(["-f".to_string(), "bv*+ba/b[height<=1080]/bv*+ba/b/best".to_string()]);
             }
             // Force merge into mp4 so ffmpeg actually combines the streams
             args.extend(["--merge-output-format".to_string(), "mp4".to_string()]);

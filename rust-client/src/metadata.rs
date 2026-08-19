@@ -143,6 +143,8 @@ pub async fn fetch_metadata(url: &str) -> Result<Response> {
         .arg("--dump-single-json")
         .arg("--no-download")
         .arg("--no-warnings")
+        .arg("--js-runtimes")
+        .arg("node")
         .arg(url)
         .output()
         .await
