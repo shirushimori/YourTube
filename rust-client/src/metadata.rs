@@ -135,6 +135,15 @@ pub fn parse_metadata_json(json_bytes: &[u8]) -> Result<Response> {
     })
 }
 
+fn get_node_runtime_arg() -> String {
+    for p in &["/usr/bin/node", "/usr/local/bin/node", "/bin/node"] {
+        if std::path::Path::new(p).is_file() {
+            return format!("node:{}", p);
+        }
+    }
+    "node".to_string()
+}
+
 /// Executes yt-dlp with `--dump-single-json --no-download <url>` and returns parsed metadata.
 pub async fn fetch_metadata(url: &str) -> Result<Response> {
     let yt_dlp_bin = find_yt_dlp();
@@ -144,7 +153,7 @@ pub async fn fetch_metadata(url: &str) -> Result<Response> {
         .arg("--no-download")
         .arg("--no-warnings")
         .arg("--js-runtimes")
-        .arg("node")
+        .arg(get_node_runtime_arg())
         .arg(url)
         .output()
         .await

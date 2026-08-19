@@ -2,50 +2,91 @@
   const HOST = "com.yourtube.client";
   const api = typeof browser !== "undefined" ? browser : chrome;
   let nativePort = null;
-  let pendingMetaResolve = null;
-  let pendingListResolve = null;
-  let pendingServeResolve = null;
   let activeTabId = null;
+
+  // Request/Response callback maps
+  let pendingMetaCallback = null;
+  let pendingListCallback = null;
+  let pendingServeCallback = null;
+
+  function safeClone(data) {
+    try {
+      return JSON.parse(JSON.stringify(data));
+    } catch {
+      return { type: "error", message: "Clone error" };
+    }
+  }
 
   function getNativePort() {
     if (nativePort) return nativePort;
-    nativePort = api.runtime.connectNative(HOST);
-    nativePort.onMessage.addListener((msg) => {
-      const cleanMsg = JSON.parse(JSON.stringify(msg));
-      if (cleanMsg.type === "metadata" && pendingMetaResolve) {
-        pendingMetaResolve(cleanMsg);
-        pendingMetaResolve = null;
-      } else if (cleanMsg.type === "downloads_list" && pendingListResolve) {
-        pendingListResolve(cleanMsg);
-        pendingListResolve = null;
-      } else if (cleanMsg.type === "file_served" && pendingServeResolve) {
-        pendingServeResolve(cleanMsg);
-        pendingServeResolve = null;
-      } else if (activeTabId) {
-        api.tabs.sendMessage(activeTabId, cleanMsg).catch(() => {});
+    try {
+      nativePort = api.runtime.connectNative(HOST);
+    } catch (e) {
+      nativePort = null;
+      return null;
+    }
+
+    nativePort.onMessage.addListener((rawMsg) => {
+      const msg = safeClone(rawMsg);
+      if (msg.type === "metadata" && pendingMetaCallback) {
+        const cb = pendingMetaCallback;
+        pendingMetaCallback = null;
+        try { cb(msg); } catch (_) {}
+      } else if (msg.type === "downloads_list" && pendingListCallback) {
+        const cb = pendingListCallback;
+        pendingListCallback = null;
+        try { cb(msg); } catch (_) {}
+      } else if (msg.type === "file_served" && pendingServeCallback) {
+        const cb = pendingServeCallback;
+        pendingServeCallback = null;
+        try { cb(msg); } catch (_) {}
+      } else {
+        // Broadcast progress/status events to active tabs
+        if (activeTabId) {
+          api.tabs.sendMessage(activeTabId, msg).catch(() => {});
+        }
+        api.tabs.query({ active: true }, (tabs) => {
+          if (tabs) {
+            for (const t of tabs) {
+              if (t.id && t.id !== activeTabId) {
+                api.tabs.sendMessage(t.id, msg).catch(() => {});
+              }
+            }
+          }
+        });
       }
     });
+
     nativePort.onDisconnect.addListener(() => {
       const err = chrome.runtime.lastError;
       nativePort = null;
-      const errMsg = { type: "error", message: err ? err.message : "Disconnected" };
-      if (pendingMetaResolve) {
-        pendingMetaResolve(errMsg);
-        pendingMetaResolve = null;
+      const errMsg = safeClone({
+        type: "error",
+        message: err ? err.message : "Client disconnected",
+      });
+
+      if (pendingMetaCallback) {
+        const cb = pendingMetaCallback;
+        pendingMetaCallback = null;
+        try { cb(errMsg); } catch (_) {}
       }
-      if (pendingListResolve) {
-        pendingListResolve(errMsg);
-        pendingListResolve = null;
+      if (pendingListCallback) {
+        const cb = pendingListCallback;
+        pendingListCallback = null;
+        try { cb(errMsg); } catch (_) {}
       }
-      if (pendingServeResolve) {
-        pendingServeResolve(errMsg);
-        pendingServeResolve = null;
+      if (pendingServeCallback) {
+        const cb = pendingServeCallback;
+        pendingServeCallback = null;
+        try { cb(errMsg); } catch (_) {}
       }
+
       if (activeTabId) {
         api.tabs.sendMessage(activeTabId, errMsg).catch(() => {});
         activeTabId = null;
       }
     });
+
     return nativePort;
   }
 
@@ -94,22 +135,6 @@
       const req = tx.objectStore(STORE_NAME).index("timestamp").getAll();
       req.onsuccess = () => resolve(req.result.reverse());
       req.onerror = () => reject(req.error);
-    });
-  }
-
-  async function updateDownload(id, updates) {
-    const db = await openDB();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE_NAME, "readwrite");
-      const store = tx.objectStore(STORE_NAME);
-      const req = store.get(id);
-      req.onsuccess = () => {
-        if (req.result) {
-          store.put({ ...req.result, ...updates });
-        }
-      };
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
     });
   }
 
@@ -162,23 +187,34 @@
     });
   }
 
+  // Message dispatcher
   api.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    if (!msg || !msg.type) return false;
+
     if (msg.type === "fetch_metadata") {
-      pendingMetaResolve = null;
       const port = getNativePort();
-      pendingMetaResolve = sendResponse;
+      if (!port) {
+        sendResponse({ type: "error", message: "Failed to connect to native client" });
+        return false;
+      }
+      pendingMetaCallback = sendResponse;
       port.postMessage({ type: "fetch_metadata", url: msg.url });
       return true;
     }
 
     if (msg.type === "download_start") {
-      activeTabId = sender.tab.id;
+      activeTabId = sender.tab ? sender.tab.id : null;
       const port = getNativePort();
+      if (!port) {
+        sendResponse({ ok: false, error: "Native client disconnected" });
+        return false;
+      }
+
       port.postMessage({
         type: "download",
         url: msg.url,
-        download_type: msg.download_type,
-        quality: msg.quality,
+        download_type: msg.download_type || "video_audio",
+        quality: msg.quality || "1080",
         audio_format: msg.audio_format || "mp3",
         audio_bitrate: msg.audio_bitrate || "192",
         output_dir: msg.output_dir,
@@ -206,27 +242,35 @@
       }).catch(() => {});
 
       sendResponse({ ok: true });
-      return true;
+      return false;
     }
 
     if (msg.type === "list_downloads") {
       const port = getNativePort();
+      if (!port) {
+        sendResponse({ type: "downloads_list", directory: msg.directory || "~/Videos", files: [] });
+        return false;
+      }
       const dir = msg.directory || "~/Videos";
-      pendingListResolve = sendResponse;
+      pendingListCallback = sendResponse;
       port.postMessage({ type: "list_downloads", directory: dir });
       return true;
     }
 
     if (msg.type === "serve_file") {
       const port = getNativePort();
-      pendingServeResolve = sendResponse;
+      if (!port) {
+        sendResponse({ type: "error", message: "Native client disconnected" });
+        return false;
+      }
+      pendingServeCallback = sendResponse;
       port.postMessage({ type: "serve_file", path: msg.path });
       return true;
     }
 
     if (msg.type === "get_tracked_downloads") {
       getDownloads().then((downloads) => {
-        sendResponse({ type: "tracked_downloads", downloads });
+        sendResponse({ type: "tracked_downloads", downloads: safeClone(downloads) });
       }).catch(() => {
         sendResponse({ type: "tracked_downloads", downloads: [] });
       });
@@ -238,11 +282,12 @@
         status: "completed",
         file_path: msg.file_path || "",
       }).catch(() => {});
+      return false;
     }
 
     if (msg.type === "get_playlists") {
       getPlaylists().then((playlists) => {
-        sendResponse({ type: "playlists_list", playlists });
+        sendResponse({ type: "playlists_list", playlists: safeClone(playlists) });
       }).catch(() => {
         sendResponse({ type: "playlists_list", playlists: [] });
       });
@@ -273,13 +318,13 @@
 
     if (msg.type === "get_settings") {
       api.storage.local.get("settings", (result) => {
-        sendResponse({ settings: result.settings || {} });
+        sendResponse({ settings: safeClone(result.settings || {}) });
       });
       return true;
     }
 
     if (msg.type === "save_settings") {
-      api.storage.local.set({ settings: msg.settings }, () => {
+      api.storage.local.set({ settings: safeClone(msg.settings) }, () => {
         sendResponse({ ok: true });
       });
       return true;

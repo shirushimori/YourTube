@@ -27,6 +27,15 @@ pub fn sanitize_quality(quality: &str) -> Option<String> {
     }
 }
 
+fn get_node_runtime_arg() -> String {
+    for p in &["/usr/bin/node", "/usr/local/bin/node", "/bin/node"] {
+        if std::path::Path::new(p).is_file() {
+            return format!("node:{}", p);
+        }
+    }
+    "node".to_string()
+}
+
 /// Builds the argument list for yt-dlp based on the download options.
 pub fn build_yt_dlp_args(
     url: &str,
@@ -42,7 +51,7 @@ pub fn build_yt_dlp_args(
         "--newline".to_string(),
         "--no-warnings".to_string(),
         "--js-runtimes".to_string(),
-        "node".to_string(),
+        get_node_runtime_arg(),
     ];
 
     match download_type {
