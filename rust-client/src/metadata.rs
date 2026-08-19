@@ -152,6 +152,7 @@ pub async fn fetch_metadata(url: &str) -> Result<Response> {
         .arg("--dump-single-json")
         .arg("--no-download")
         .arg("--no-warnings")
+        .arg("--no-playlist")
         .arg("--js-runtimes")
         .arg(get_node_runtime_arg())
         .arg(url)
