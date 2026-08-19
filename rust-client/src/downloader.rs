@@ -59,15 +59,17 @@ pub fn build_yt_dlp_args(
             }
         }
         _ => {
-            // "video_audio" or default
+            // "video_audio" or default — always try to merge best video + best audio
             if let Some(height) = quality.and_then(sanitize_quality) {
                 args.extend([
                     "-f".to_string(),
-                    format!("bestvideo[height<={height}]+bestaudio/best[height<={height}]/best"),
+                    format!("bestvideo[height<={height}]+bestaudio/bestvideo[height<={height}]/best"),
                 ]);
             } else {
                 args.extend(["-f".to_string(), "bestvideo+bestaudio/best".to_string()]);
             }
+            // Force merge into mp4 so ffmpeg actually combines the streams
+            args.extend(["--merge-output-format".to_string(), "mp4".to_string()]);
         }
     }
 

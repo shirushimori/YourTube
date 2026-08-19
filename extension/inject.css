@@ -476,22 +476,25 @@
 }
 
 .yt-hub-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 20px;
+  padding: 8px 20px;
   cursor: pointer;
   transition: background 0.1s;
 }
 .yt-hub-item:hover {
-  background: #2a2a2a;
+  background: #272727;
+}
+
+.yt-hub-item-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .yt-hub-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 6px;
-  background: #1a1a1a;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: #272727;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -579,8 +582,8 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  border: 1px solid #333;
-  background: #1a1a1a;
+  border: none;
+  background: rgba(255,255,255,0.1);
   color: #f1f1f1;
   font-size: 14px;
   cursor: pointer;
@@ -591,12 +594,37 @@
   transition: all 0.15s;
   opacity: 0;
 }
-.yt-hub-item:hover .yt-hub-play {
+.yt-hub-item:hover .yt-hub-play,
+.yt-hub-item:hover .yt-hub-play-btn {
   opacity: 1;
 }
-.yt-hub-play:hover {
+.yt-hub-play:hover,
+.yt-hub-play-btn:hover {
   background: #ff4444;
-  border-color: #ff4444;
+}
+
+.yt-hub-play-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.1);
+  color: #f1f1f1;
+  font-size: 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  opacity: 0;
+}
+
+.yt-hub-empty-inline {
+  padding: 20px;
+  text-align: center;
+  font-size: 13px;
+  color: #555;
 }
 
 /* Video popup player */

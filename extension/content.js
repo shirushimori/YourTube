@@ -497,7 +497,54 @@
     if (!result || result.type === "error") { alert("Failed: " + (result?.message || "Unknown")); return; }
 
     if (hubOpenMode === "tab") {
-      const html = `<!DOCTYPE html><html><head><title>${escapeHtml(meta?.title || name)}</title><style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0f0f0f;display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column}video{max-width:100%;max-height:80vh}.info{color:#f1f1f1;padding:16px;text-align:center;font-family:sans-serif}.info h2{font-size:18px;margin-bottom:8px}.info p{font-size:13px;color:#aaa}</style></head><body><video controls autoplay src="${result.url}"></video><div class="info"><h2>${escapeHtml(meta?.title || name)}</h2>${meta?.channel ? `<p>${escapeHtml(meta.channel)}</p>` : ""}${meta?.description ? `<p>${escapeHtml(meta.description).substring(0,200)}</p>` : ""}</div></body></html>`;
+      const title = escapeHtml(meta?.title || name);
+      const channel = meta?.channel ? escapeHtml(meta.channel) : "";
+      const desc = meta?.description ? escapeHtml(meta.description).substring(0, 500) : "";
+      const html = `<!DOCTYPE html><html><head><title>${title} - YourTube</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0f0f0f;color:#f1f1f1;font-family:"Roboto","Arial",sans-serif}
+.yt-page{max-width:1280px;margin:0 auto;padding:24px;display:grid;grid-template-columns:1fr 400px;gap:24px}
+@media(max-width:960px){.yt-page{grid-template-columns:1fr;}}
+.yt-player{background:#000;border-radius:12px;overflow:hidden}
+.yt-player video{width:100%;display:block;max-height:72vh}
+.yt-info{padding:16px 0}
+.yt-info h1{font-size:20px;font-weight:600;line-height:1.4;margin-bottom:8px}
+.yt-channel{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #272727}
+.yt-channel-avatar{width:40px;height:40px;border-radius:50%;background:#272727;display:flex;align-items:center;justify-content:center;font-size:18px;color:#aaa}
+.yt-channel-name{font-size:16px;font-weight:500}
+.yt-desc{background:#272727;border-radius:12px;padding:12px 16px;margin-top:16px;font-size:14px;line-height:1.6;color:#aaa;white-space:pre-wrap}
+.yt-sidebar{background:#121212;border-radius:12px;padding:20px;height:fit-content}
+.yt-sidebar h3{font-size:14px;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px}
+.yt-sidebar-item{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #272727;font-size:13px}
+.yt-sidebar-item span:first-child{color:#aaa}
+.yt-sidebar-item span:last-child{color:#f1f1f1;font-weight:500}
+.yt-topbar{background:#0f0f0f;padding:12px 24px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #272727}
+.yt-topbar-logo{font-size:20px;font-weight:700;color:#f1f1f1;text-decoration:none}
+.yt-topbar-logo span{color:#ff4444}
+</style></head><body>
+<div class="yt-topbar"><span class="yt-topbar-logo">Your<span>Tube</span></span></div>
+<div class="yt-page">
+  <div>
+    <div class="yt-player"><video controls autoplay src="${result.url}"></video></div>
+    <div class="yt-info">
+      <h1>${title}</h1>
+      ${channel ? `<div class="yt-channel"><div class="yt-channel-avatar">▶</div><div class="yt-channel-name">${channel}</div></div>` : ""}
+      ${desc ? `<div class="yt-desc">${desc}</div>` : ""}
+    </div>
+  </div>
+  <div class="yt-sidebar">
+    <h3>File Details</h3>
+    <div class="yt-sidebar-item"><span>File</span><span>${escapeHtml(name)}</span></div>
+    ${meta?.quality ? `<div class="yt-sidebar-item"><span>Quality</span><span>${escapeHtml(meta.quality)}</span></div>` : ""}
+    ${meta?.download_type ? `<div class="yt-sidebar-item"><span>Type</span><span>${escapeHtml(meta.download_type)}</span></div>` : ""}
+    ${meta?.upload_date ? `<div class="yt-sidebar-item"><span>Upload Date</span><span>${formatDate(meta.upload_date)}</span></div>` : ""}
+    ${meta?.view_count ? `<div class="yt-sidebar-item"><span>Views</span><span>${formatNumber(meta.view_count)}</span></div>` : ""}
+    ${meta?.like_count ? `<div class="yt-sidebar-item"><span>Likes</span><span>${formatNumber(meta.like_count)}</span></div>` : ""}
+    ${meta?.source ? `<div class="yt-sidebar-item"><span>Source</span><span><a href="${escapeHtml(meta.source)}" style="color:#4da6ff" target="_blank">YouTube</a></span></div>` : ""}
+  </div>
+</div>
+</body></html>`;
       const blob = new Blob([html], { type: "text/html" });
       window.open(URL.createObjectURL(blob), "_blank");
     } else {
