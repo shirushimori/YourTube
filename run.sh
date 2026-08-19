@@ -26,6 +26,7 @@ echo ""
 echo "Running client installer..."
 # The client will automatically download yt-dlp and register browser manifests
 ./target_build/release/yourtube-client --install
+killall yourtube-client 2>/dev/null || true
 
 # 2. Package Extension
 echo ""
