@@ -32,38 +32,44 @@ pub fn build_yt_dlp_args(
     url: &str,
     download_type: &str,
     quality: Option<&str>,
+    audio_format: Option<&str>,
+    audio_bitrate: Option<&str>,
     output_dir: Option<&str>,
     start_time: Option<&str>,
     end_time: Option<&str>,
 ) -> Vec<String> {
-    let mut args = vec!["--newline".to_string()];
+    let mut args = vec!["--newline".to_string(), "--no-warnings".to_string()];
 
     match download_type {
         "audio_only" => {
+            let fmt = audio_format.unwrap_or("mp3");
+            let bitrate = audio_bitrate.unwrap_or("192");
             args.extend([
                 "-f".to_string(),
                 "bestaudio/best".to_string(),
                 "--extract-audio".to_string(),
                 "--audio-format".to_string(),
-                "mp3".to_string(),
+                fmt.to_string(),
+                "--audio-quality".to_string(),
+                format!("{}K", bitrate),
             ]);
         }
         "video_only" => {
             if let Some(height) = quality.and_then(sanitize_quality) {
                 args.extend([
                     "-f".to_string(),
-                    format!("bestvideo[height<={height}]/bestvideo"),
+                    format!("bestvideo[height<={height}]/bestvideo/best"),
                 ]);
             } else {
-                args.extend(["-f".to_string(), "bestvideo".to_string()]);
+                args.extend(["-f".to_string(), "bestvideo/best".to_string()]);
             }
         }
         _ => {
-            // "video_audio" or default — always try to merge best video + best audio
+            // "video_audio" or default — download best video + best audio and merge
             if let Some(height) = quality.and_then(sanitize_quality) {
                 args.extend([
                     "-f".to_string(),
-                    format!("bestvideo[height<={height}]+bestaudio/bestvideo[height<={height}]/best"),
+                    format!("bestvideo[height<={height}]+bestaudio/bestvideo+bestaudio/best"),
                 ]);
             } else {
                 args.extend(["-f".to_string(), "bestvideo+bestaudio/best".to_string()]);
@@ -113,6 +119,8 @@ pub async fn download<F, Fut>(
     url: &str,
     download_type: &str,
     quality: Option<&str>,
+    audio_format: Option<&str>,
+    audio_bitrate: Option<&str>,
     output_dir: Option<&str>,
     start_time: Option<&str>,
     end_time: Option<&str>,
@@ -127,6 +135,8 @@ where
         url,
         download_type,
         quality,
+        audio_format,
+        audio_bitrate,
         output_dir,
         start_time,
         end_time,

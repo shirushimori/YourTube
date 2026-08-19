@@ -178,7 +178,7 @@
               <label><input type="radio" name="yt_type" value="audio_only"><span>Audio</span></label>
             </div>
           </div>
-          <div class="yt-section"><label>Quality</label>
+          <div class="yt-section yt-video-quality-section"><label>Quality</label>
             <select class="yt-quality">
               <option value="2160">2160p (4K)</option>
               <option value="1440">1440p (2K)</option>
@@ -186,6 +186,24 @@
               <option value="720">720p</option>
               <option value="480">480p</option>
               <option value="360">360p</option>
+            </select>
+          </div>
+          <div class="yt-section yt-audio-options-section" style="display:none">
+            <label>Audio Format</label>
+            <select class="yt-audio-format">
+              <option value="mp3" selected>MP3</option>
+              <option value="m4a">M4A</option>
+              <option value="opus">Opus</option>
+              <option value="wav">WAV</option>
+              <option value="flac">FLAC</option>
+            </select>
+            <label style="margin-top:10px;display:block">Audio Quality</label>
+            <select class="yt-audio-quality">
+              <option value="320">320 kbps (Best)</option>
+              <option value="256">256 kbps</option>
+              <option value="192" selected>192 kbps</option>
+              <option value="128">128 kbps</option>
+              <option value="96">96 kbps</option>
             </select>
           </div>
           <div class="yt-section"><label class="yt-checkbox"><input type="checkbox" class="yt-playlist-check"><span>Download playlist</span></label></div>
@@ -211,6 +229,15 @@
         saveSettings();
       }
     });
+
+    // Toggle quality vs audio options based on download type
+    o.querySelectorAll('input[name="yt_type"]').forEach((radio) => {
+      radio.addEventListener("change", () => {
+        const isAudio = radio.value === "audio_only";
+        o.querySelector(".yt-video-quality-section").style.display = isAudio ? "none" : "";
+        o.querySelector(".yt-audio-options-section").style.display = isAudio ? "" : "none";
+      });
+    });
   }
 
   async function handleDownload() {
@@ -220,6 +247,8 @@
     const url = getVideoUrl();
     const downloadType = overlay.querySelector('input[name="yt_type"]:checked').value;
     const quality = overlay.querySelector(".yt-quality").value;
+    const audioFormat = overlay.querySelector(".yt-audio-format").value;
+    const audioBitrate = overlay.querySelector(".yt-audio-quality").value;
     const startTime = overlay.querySelector(".yt-start").value || null;
     const endTime = overlay.querySelector(".yt-end").value || null;
     const outputDir = overlay.querySelector(".yt-path").value.trim();
@@ -228,36 +257,43 @@
     status.className = "yt-status visible loading";
     status.textContent = "Fetching video info...";
 
-    const meta = await chrome.runtime.sendMessage({ type: "fetch_metadata", url });
-    if (!meta || meta.type === "error") {
+    try {
+      const meta = await chrome.runtime.sendMessage({ type: "fetch_metadata", url });
+      if (!meta || meta.type === "error") {
+        status.className = "yt-status visible error";
+        status.textContent = (meta && meta.message) || "Failed to connect to native client";
+        btn.disabled = false;
+        return;
+      }
+
+      status.className = "yt-status visible loading";
+      status.textContent = "Starting download...";
+      showToast(meta.title || "Downloading...");
+
+      chrome.runtime.sendMessage({
+        type: "download_start",
+        url,
+        title: meta.title || "",
+        description: meta.description || "",
+        thumbnail: meta.thumbnail || "",
+        channel: meta.channel || "",
+        view_count: meta.view_count || 0,
+        like_count: meta.like_count || 0,
+        upload_date: meta.upload_date || "",
+        source: meta.source || "",
+        duration: meta.duration || 0,
+        download_type: downloadType,
+        quality: quality,
+        audio_format: audioFormat,
+        audio_bitrate: audioBitrate,
+        output_dir: outputDir,
+        start_time: startTime,
+        end_time: endTime,
+      });
+    } catch (err) {
       status.className = "yt-status visible error";
-      status.textContent = (meta && meta.message) || "Failed to connect";
-      btn.disabled = false;
-      return;
+      status.textContent = "Error: " + (err.message || "Unknown error");
     }
-
-    status.className = "yt-status visible loading";
-    status.textContent = "Starting download...";
-    showToast(meta.title || "Downloading...");
-
-    await chrome.runtime.sendMessage({
-      type: "download_start",
-      url,
-      title: meta.title || "",
-      description: meta.description || "",
-      thumbnail: meta.thumbnail || "",
-      channel: meta.channel || "",
-      view_count: meta.view_count || 0,
-      like_count: meta.like_count || 0,
-      upload_date: meta.upload_date || "",
-      source: meta.source || "",
-      duration: meta.duration || 0,
-      download_type: downloadType,
-      quality,
-      output_dir: outputDir,
-      start_time: startTime,
-      end_time: endTime,
-    });
 
     btn.disabled = false;
   }

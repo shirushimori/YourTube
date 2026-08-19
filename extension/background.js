@@ -177,6 +177,8 @@
         url: msg.url,
         download_type: msg.download_type,
         quality: msg.quality,
+        audio_format: msg.audio_format || "mp3",
+        audio_bitrate: msg.audio_bitrate || "192",
         output_dir: msg.output_dir,
         start_time: msg.start_time,
         end_time: msg.end_time,

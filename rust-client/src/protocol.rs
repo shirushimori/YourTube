@@ -34,6 +34,10 @@ pub enum Request {
         download_type: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         quality: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        audio_format: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        audio_bitrate: Option<String>,
         #[serde(default, alias = "outputDir", skip_serializing_if = "Option::is_none")]
         output_dir: Option<String>,
         #[serde(default, alias = "startTime", skip_serializing_if = "Option::is_none")]
