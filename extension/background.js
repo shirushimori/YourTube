@@ -11,36 +11,38 @@
     if (nativePort) return nativePort;
     nativePort = api.runtime.connectNative(HOST);
     nativePort.onMessage.addListener((msg) => {
-      if (msg.type === "metadata" && pendingMetaResolve) {
-        pendingMetaResolve(msg);
+      const cleanMsg = JSON.parse(JSON.stringify(msg));
+      if (cleanMsg.type === "metadata" && pendingMetaResolve) {
+        pendingMetaResolve(cleanMsg);
         pendingMetaResolve = null;
-      } else if (msg.type === "downloads_list" && pendingListResolve) {
-        pendingListResolve(msg);
+      } else if (cleanMsg.type === "downloads_list" && pendingListResolve) {
+        pendingListResolve(cleanMsg);
         pendingListResolve = null;
-      } else if (msg.type === "file_served" && pendingServeResolve) {
-        pendingServeResolve(msg);
+      } else if (cleanMsg.type === "file_served" && pendingServeResolve) {
+        pendingServeResolve(cleanMsg);
         pendingServeResolve = null;
       } else if (activeTabId) {
-        api.tabs.sendMessage(activeTabId, msg).catch(() => {});
+        api.tabs.sendMessage(activeTabId, cleanMsg).catch(() => {});
       }
     });
     nativePort.onDisconnect.addListener(() => {
       const err = chrome.runtime.lastError;
       nativePort = null;
+      const errMsg = { type: "error", message: err ? err.message : "Disconnected" };
       if (pendingMetaResolve) {
-        pendingMetaResolve({ type: "error", message: err ? err.message : "Disconnected" });
+        pendingMetaResolve(errMsg);
         pendingMetaResolve = null;
       }
       if (pendingListResolve) {
-        pendingListResolve({ type: "error", message: err ? err.message : "Disconnected" });
+        pendingListResolve(errMsg);
         pendingListResolve = null;
       }
       if (pendingServeResolve) {
-        pendingServeResolve({ type: "error", message: err ? err.message : "Disconnected" });
+        pendingServeResolve(errMsg);
         pendingServeResolve = null;
       }
       if (activeTabId) {
-        api.tabs.sendMessage(activeTabId, { type: "error", message: err ? err.message : "Disconnected" }).catch(() => {});
+        api.tabs.sendMessage(activeTabId, errMsg).catch(() => {});
         activeTabId = null;
       }
     });

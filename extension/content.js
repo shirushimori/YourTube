@@ -324,7 +324,7 @@
     setSafeHtml(hub, `
       <div class="yt-hub-panel">
         <div class="yt-hub-header">
-          <h2><span>YourTube</span> Downloads Hub</h2>
+          <h2>YDownload</h2>
           <div class="yt-hub-header-actions">
             <button class="yt-hub-close">&times;</button>
           </div>
@@ -793,7 +793,7 @@ window.addEventListener("keydown", (e) => {
 
     const btn = document.createElement("div");
     btn.id = HUB_BTN_ID;
-    setSafeHtml(btn, `<a class="yt-simple-endpoint style-scope ytd-guide-entry-renderer" tabindex="0"><tp-yt-paper-item class="style-scope ytd-guide-entry-renderer" tabindex="0"><div class="guide-entry-maker style-scope ytd-guide-entry-renderer" title="Downloads Hub"><yt-formatted-string class="style-scope ytd-guide-entry-renderer">⬇ Hub</yt-formatted-string></div></tp-yt-paper-item></a>`);
+    setSafeHtml(btn, `<a class="yt-simple-endpoint style-scope ytd-guide-entry-renderer" tabindex="0"><tp-yt-paper-item class="style-scope ytd-guide-entry-renderer" tabindex="0"><div class="guide-entry-maker style-scope ytd-guide-entry-renderer" title="YDownload"><yt-formatted-string class="style-scope ytd-guide-entry-renderer" style="font-weight: 500;">YDownload</yt-formatted-string></div></tp-yt-paper-item></a>`);
     btn.style.cursor = "pointer";
     btn.addEventListener("click", (e) => {
       e.preventDefault(); e.stopPropagation();
