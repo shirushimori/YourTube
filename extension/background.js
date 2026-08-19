@@ -193,7 +193,7 @@
         upload_date: msg.upload_date || "",
         source: msg.source || "",
         duration: msg.duration || 0,
-        output_dir: msg.output_dir || "/home/mori/Videos",
+        output_dir: msg.output_dir || "~/Videos",
         quality: msg.quality || "1080",
         download_type: msg.download_type || "video_audio",
         file_path: "",
@@ -207,7 +207,7 @@
 
     if (msg.type === "list_downloads") {
       const port = getNativePort();
-      const dir = msg.directory || "/home/mori/Videos";
+      const dir = msg.directory || "~/Videos";
       pendingListResolve = sendResponse;
       port.postMessage({ type: "list_downloads", directory: dir });
       return true;

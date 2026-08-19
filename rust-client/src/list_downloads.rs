@@ -1,4 +1,3 @@
-use std::path::Path;
 use anyhow::{Context, Result};
 use crate::protocol::{DownloadFile, Response};
 
@@ -8,9 +7,19 @@ const VIDEO_EXTENSIONS: &[&str] = &[
 ];
 
 pub fn list_downloads(directory: &str) -> Result<Response> {
-    let dir = Path::new(directory);
+    // Expand ~ to home directory
+    let expanded = if directory.starts_with("~/") || directory == "~" {
+        if let Some(home) = dirs::home_dir() {
+            home.join(&directory[2..]).to_string_lossy().to_string()
+        } else {
+            directory.to_string()
+        }
+    } else {
+        directory.to_string()
+    };
+    let dir = std::path::Path::new(&expanded);
     if !dir.is_dir() {
-        anyhow::bail!("Directory does not exist: {}", directory);
+        anyhow::bail!("Directory does not exist: {}", expanded);
     }
 
     let mut files = Vec::new();

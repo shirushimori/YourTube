@@ -72,7 +72,8 @@
   }
 
   // ── Settings ──
-  let hubSettings = { fullscreen: false, showThumbnails: true, defaultFolder: "/home/mori/Videos" };
+  const defaultVideoDir = (typeof navigator !== "undefined" && navigator.platform?.includes("Win")) ? "C:\\Users\\Videos" : (typeof process !== "undefined" ? process.env.HOME + "/Videos" : "/home/" + (location.hostname || "user") + "/Videos");
+  let hubSettings = { fullscreen: false, showThumbnails: true, defaultFolder: "~/Videos" };
 
   async function loadSettings() {
     try {
@@ -191,7 +192,7 @@
           <div class="yt-section"><label>Time Range (optional)</label>
             <div class="yt-time-range"><input type="text" class="yt-start" placeholder="00:00:00"><span>to</span><input type="text" class="yt-end" placeholder="end"></div>
           </div>
-          <div class="yt-section"><label>Save to</label><input type="text" class="yt-path" value="${hubSettings.defaultFolder}"></div>
+          <div class="yt-section"><label>Save to</label><div class="yt-path-row"><input type="text" class="yt-path" value="${hubSettings.defaultFolder}"><button class="yt-browse-btn" type="button">Browse</button></div></div>
           <button class="yt-download-btn">Download</button>
           <div class="yt-status"></div>
         </div>
@@ -201,6 +202,15 @@
     o.querySelector(".yt-close").addEventListener("click", () => o.classList.remove("visible"));
     o.addEventListener("click", (e) => { if (e.target === o) o.classList.remove("visible"); });
     o.querySelector(".yt-download-btn").addEventListener("click", handleDownload);
+    o.querySelector(".yt-browse-btn").addEventListener("click", () => {
+      const pathInput = o.querySelector(".yt-path");
+      const newPath = prompt("Enter download folder path:", pathInput.value);
+      if (newPath !== null && newPath.trim()) {
+        pathInput.value = newPath.trim();
+        hubSettings.defaultFolder = newPath.trim();
+        saveSettings();
+      }
+    });
   }
 
   async function handleDownload() {
@@ -322,28 +332,10 @@
     `);
     document.body.appendChild(hub);
 
-    // Fullscreen state
-    if (hubSettings.fullscreen) hub.classList.add("fullscreen");
-
     hub.querySelector(".yt-hub-close").addEventListener("click", () => hub.classList.remove("visible"));
     hub.addEventListener("click", (e) => { if (e.target === hub) hub.classList.remove("visible"); });
 
-    // Fullscreen toggle
-    hub.querySelector(".yt-hub-fullscreen").addEventListener("click", () => {
-      hubSettings.fullscreen = !hubSettings.fullscreen;
-      hub.classList.toggle("fullscreen", hubSettings.fullscreen);
-      saveSettings();
-      if (hubSettings.fullscreen) loadHubFiles();
-    });
 
-    // Mode toggle
-    hub.querySelectorAll(".yt-hub-mode").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        hub.querySelectorAll(".yt-hub-mode").forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
-        hubOpenMode = btn.dataset.mode;
-      });
-    });
 
     // Filter tabs
     hub.querySelectorAll(".yt-hub-tab").forEach((tab) => {
@@ -391,14 +383,18 @@
     setSafeHtml(allList, '<div class="yt-hub-loading">Loading...</div>');
     empty.classList.add("hidden");
 
-    const result = await chrome.runtime.sendMessage({ type: "list_downloads", directory: dir });
-    if (!result || result.type === "error") {
-      setSafeHtml(allList, `<div class="yt-hub-error">${(result && result.message) || "Failed to load"}</div>`);
-      return;
-    }
+    try {
+      const result = await chrome.runtime.sendMessage({ type: "list_downloads", directory: dir });
+      if (!result || result.type === "error") {
+        setSafeHtml(allList, `<div class="yt-hub-error">${(result && result.message) || "Failed to load. Is the native client running?"}</div>`);
+        return;
+      }
 
-    hubFileList = result.files || [];
-    renderFileLists();
+      hubFileList = result.files || [];
+      renderFileLists();
+    } catch (err) {
+      setSafeHtml(allList, `<div class="yt-hub-error">Connection error: ${err.message || "Native client not found"}</div>`);
+    }
   }
 
   function renderFileLists() {
@@ -735,9 +731,10 @@
   function hookDownloadButton() {
     if (!isVideoPage()) return;
     if (document.getElementById(HOOK_BTN_ID)) return;
-    const row = document.querySelector("#above-the-fold #menu-container") ||
-      document.querySelector("ytd-watch-metadata #above-the-fold") ||
-      document.querySelector("#actions ytd-menu-renderer");
+    const row = document.querySelector("#top-level-buttons-computed") ||
+      document.querySelector("ytd-menu-renderer.style-scope.ytd-watch-metadata #top-level-buttons-computed") ||
+      document.querySelector("#menu-container ytd-menu-renderer #top-level-buttons-computed") ||
+      document.querySelector("#above-the-fold #menu-container");
     if (!row) return;
 
     const btn = document.createElement("button");
@@ -764,7 +761,7 @@
     if (!nav) return;
     const btn = document.createElement("div");
     btn.id = HUB_BTN_ID;
-    setSafeHtml(btn, `<a class="yt-simple-endpoint style-scope ytd-guide-entry-renderer" tabindex="0"><tp-yt-paper-item class="style-scope ytd-guide-entry-renderer" tabindex="0"><ytd-badge-supported-renderer class="style-scope ytd-guide-entry-renderer" style="display: none;"></ytd-badge-supported-renderer><div class="guide-entry-maker style-scope ytd-guide-entry-renderer" title="Downloads Hub"><span style="margin-right: 16px;">&#128229;</span><yt-formatted-string class="style-scope ytd-guide-entry-renderer">Downloads</yt-formatted-string></div></tp-yt-paper-item></a>`);
+    setSafeHtml(btn, `<a class="yt-simple-endpoint style-scope ytd-guide-entry-renderer" tabindex="0"><tp-yt-paper-item class="style-scope ytd-guide-entry-renderer" tabindex="0"><div class="guide-entry-maker style-scope ytd-guide-entry-renderer" title="Downloads Hub"><yt-formatted-string class="style-scope ytd-guide-entry-renderer">⬇ Hub</yt-formatted-string></div></tp-yt-paper-item></a>`);
     btn.style.cursor = "pointer";
     btn.addEventListener("click", (e) => {
       e.preventDefault(); e.stopPropagation();

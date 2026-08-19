@@ -74,7 +74,17 @@ pub fn build_yt_dlp_args(
     let out_template = match output_dir {
         Some(dir) if !dir.trim().is_empty() => {
             let clean_dir = dir.trim().trim_end_matches('/');
-            format!("{}/%(title)s.%(ext)s", clean_dir)
+            // Expand ~ to home directory
+            let expanded = if clean_dir.starts_with("~/") || clean_dir == "~" {
+                if let Some(home) = dirs::home_dir() {
+                    home.join(&clean_dir[2..]).to_string_lossy().to_string()
+                } else {
+                    clean_dir.to_string()
+                }
+            } else {
+                clean_dir.to_string()
+            };
+            format!("{}/%(title)s.%(ext)s", expanded)
         }
         _ => "%(title)s.%(ext)s".to_string(),
     };
