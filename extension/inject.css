@@ -1,3 +1,7 @@
+* {
+  border-radius: 0 !important;
+}
+
 #yourtube-overlay {
   display: none;
   position: fixed;
