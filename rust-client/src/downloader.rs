@@ -60,7 +60,7 @@ pub fn build_yt_dlp_args(
             let bitrate = audio_bitrate.unwrap_or("192");
             args.extend([
                 "-f".to_string(),
-                "ba/b".to_string(),
+                "ba[protocol=m3u8_native]/ba/b".to_string(),
                 "--extract-audio".to_string(),
                 "--audio-format".to_string(),
                 fmt.to_string(),
@@ -72,10 +72,13 @@ pub fn build_yt_dlp_args(
             if let Some(height) = quality.and_then(sanitize_quality) {
                 args.extend([
                     "-f".to_string(),
-                    format!("bv*[height<={height}]+ba/b[height<={height}]/bv*[height<={height}]/b[height<={height}]/bv*/b"),
+                    format!("bv*[protocol=m3u8_native][height<={height}]/bv*[protocol=m3u8][height<={height}]/bv*[height<={height}]/b[protocol=m3u8_native][height<={height}]/b[height<={height}]/bv*/18/best"),
                 ]);
             } else {
-                args.extend(["-f".to_string(), "bv*+ba/bv*/b".to_string()]);
+                args.extend([
+                    "-f".to_string(),
+                    "bv*[protocol=m3u8_native]/bv*[protocol=m3u8]/bv*/b/18/best".to_string(),
+                ]);
             }
         }
         _ => {
@@ -83,10 +86,13 @@ pub fn build_yt_dlp_args(
             if let Some(height) = quality.and_then(sanitize_quality) {
                 args.extend([
                     "-f".to_string(),
-                    format!("bv*[height<={height}]+ba/b[height<={height}]/bv*[height<={height}]/b[height<={height}]/bv*+ba/b/best"),
+                    format!("bv*[protocol=m3u8_native][height<={height}]+ba/bv*[protocol=m3u8][height<={height}]+ba/b[protocol=m3u8_native][height<={height}]/b[protocol=m3u8][height<={height}]/bv*[height<={height}]+ba/b[height<={height}]/bv*+ba/18/best"),
                 ]);
             } else {
-                args.extend(["-f".to_string(), "bv*+ba/b[height<=1080]/bv*+ba/b/best".to_string()]);
+                args.extend([
+                    "-f".to_string(),
+                    "bv*[protocol=m3u8_native]+ba/bv*[protocol=m3u8]+ba/b[protocol=m3u8_native]/bv*+ba/b/18/best".to_string(),
+                ]);
             }
             // Force merge into mp4 so ffmpeg actually combines the streams
             args.extend(["--merge-output-format".to_string(), "mp4".to_string()]);
