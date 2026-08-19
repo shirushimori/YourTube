@@ -46,7 +46,7 @@ pub fn build_yt_dlp_args(
             let bitrate = audio_bitrate.unwrap_or("192");
             args.extend([
                 "-f".to_string(),
-                "bestaudio/best".to_string(),
+                "ba/b".to_string(),
                 "--extract-audio".to_string(),
                 "--audio-format".to_string(),
                 fmt.to_string(),
@@ -58,10 +58,10 @@ pub fn build_yt_dlp_args(
             if let Some(height) = quality.and_then(sanitize_quality) {
                 args.extend([
                     "-f".to_string(),
-                    format!("bestvideo[height<={height}]/bestvideo/best"),
+                    format!("bv*[height<={height}]/bv*/b"),
                 ]);
             } else {
-                args.extend(["-f".to_string(), "bestvideo/best".to_string()]);
+                args.extend(["-f".to_string(), "bv*/b".to_string()]);
             }
         }
         _ => {
@@ -69,10 +69,10 @@ pub fn build_yt_dlp_args(
             if let Some(height) = quality.and_then(sanitize_quality) {
                 args.extend([
                     "-f".to_string(),
-                    format!("bestvideo[height<={height}]+bestaudio/bestvideo+bestaudio/best"),
+                    format!("bv*[height<={height}]+ba/b[height<={height}]/bv*+ba/b"),
                 ]);
             } else {
-                args.extend(["-f".to_string(), "bestvideo+bestaudio/best".to_string()]);
+                args.extend(["-f".to_string(), "bv*+ba/b".to_string()]);
             }
             // Force merge into mp4 so ffmpeg actually combines the streams
             args.extend(["--merge-output-format".to_string(), "mp4".to_string()]);
@@ -144,9 +144,6 @@ where
 
     let mut cmd = Command::new(&yt_dlp_bin);
     cmd.args(&args);
-    cmd.arg("--js-runtimes").arg("node");
-    cmd.arg("--extractor-args").arg("youtube:player_client=web_creator,web");
-    cmd.arg("--cookies-from-browser").arg("firefox");
     cmd.stdout(Stdio::piped());
     cmd.stderr(Stdio::piped());
 

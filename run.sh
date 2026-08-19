@@ -20,12 +20,12 @@ echo ""
 # 1. Build & Install Rust client
 echo "[1/3] Building & Installing..."
 cd "$SCRIPT_DIR/rust-client"
-cargo build --release 2>&1 | tail -1
+CARGO_TARGET_DIR=target_build cargo build --release 2>&1 | tail -1
 
 echo ""
 echo "Running client installer..."
 # The client will automatically download yt-dlp and register browser manifests
-./target/release/yourtube-client --install
+./target_build/release/yourtube-client --install
 
 # 2. Package Extension
 echo ""

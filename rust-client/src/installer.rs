@@ -5,15 +5,27 @@ use anyhow::{Context, Result};
 #[cfg(windows)]
 use winreg::{enums::*, RegKey};
 
-fn get_install_dir() -> PathBuf {
-    #[cfg(windows)]
-    {
-        dirs::data_local_dir().unwrap_or_default().join("YourTube")
+fn get_target_homes() -> Vec<PathBuf> {
+    let mut homes = Vec::new();
+
+    // Check SUDO_USER if run via sudo
+    if let Ok(sudo_user) = std::env::var("SUDO_USER") {
+        let sudo_user = sudo_user.trim();
+        if !sudo_user.is_empty() && sudo_user != "root" {
+            #[cfg(target_os = "macos")]
+            homes.push(PathBuf::from(format!("/Users/{}", sudo_user)));
+            #[cfg(not(target_os = "macos"))]
+            homes.push(PathBuf::from(format!("/home/{}", sudo_user)));
+        }
     }
-    #[cfg(not(windows))]
-    {
-        dirs::home_dir().unwrap_or_default().join(".local").join("bin")
+
+    if let Some(h) = dirs::home_dir() {
+        if !homes.contains(&h) {
+            homes.push(h);
+        }
     }
+
+    homes
 }
 
 fn get_binary_extension() -> &'static str {
@@ -27,36 +39,85 @@ fn get_binary_extension() -> &'static str {
 pub async fn install() -> Result<()> {
     println!("=== YourTube Installer ===");
 
-    let install_dir = get_install_dir();
-    if !install_dir.exists() {
-        fs::create_dir_all(&install_dir)?;
-    }
-
+    let target_homes = get_target_homes();
     let client_exe = std::env::current_exe().context("Failed to get current executable path")?;
-    let target_client = install_dir.join(format!("yourtube-client{}", get_binary_extension()));
+    let bin_ext = get_binary_extension();
+    let yt_dlp_name = format!("yt-dlp{}", bin_ext);
+    let client_name = format!("yourtube-client{}", bin_ext);
 
-    println!("Copying client to {:?}", target_client);
-    fs::copy(&client_exe, &target_client)?;
+    let mut installed_bin_paths = Vec::new();
 
-    let yt_dlp_name = format!("yt-dlp{}", get_binary_extension());
-    let target_yt_dlp = install_dir.join(&yt_dlp_name);
-
-    println!("Downloading {}...", yt_dlp_name);
-    download_yt_dlp(&target_yt_dlp).await?;
-
-    #[cfg(unix)]
+    #[cfg(windows)]
     {
-        use std::os::unix::fs::PermissionsExt;
-        fs::set_permissions(&target_client, fs::Permissions::from_mode(0o755))?;
-        fs::set_permissions(&target_yt_dlp, fs::Permissions::from_mode(0o755))?;
+        let install_dir = dirs::data_local_dir().unwrap_or_default().join("YourTube");
+        fs::create_dir_all(&install_dir)?;
+
+        let target_client = install_dir.join(&client_name);
+        println!("Copying client to {:?}", target_client);
+        fs::copy(&client_exe, &target_client)?;
+
+        let target_yt_dlp = install_dir.join(&yt_dlp_name);
+        println!("Downloading {}...", yt_dlp_name);
+        download_yt_dlp(&target_yt_dlp).await?;
+
+        installed_bin_paths.push(target_client);
     }
 
-    let manifest_path = target_client.to_string_lossy().to_string();
-    // Escape backslashes for JSON on Windows
+    #[cfg(not(windows))]
+    {
+        for home in &target_homes {
+            let install_dir = home.join(".local").join("bin");
+            let _ = fs::create_dir_all(&install_dir);
+
+            let target_client = install_dir.join(&client_name);
+            println!("Copying client to {:?}", target_client);
+            if fs::copy(&client_exe, &target_client).is_ok() {
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::PermissionsExt;
+                    let _ = fs::set_permissions(&target_client, fs::Permissions::from_mode(0o755));
+                }
+                installed_bin_paths.push(target_client.clone());
+            }
+
+            let target_yt_dlp = install_dir.join(&yt_dlp_name);
+            println!("Downloading {} to {:?}...", yt_dlp_name, target_yt_dlp);
+            if download_yt_dlp(&target_yt_dlp).await.is_ok() {
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::PermissionsExt;
+                    let _ = fs::set_permissions(&target_yt_dlp, fs::Permissions::from_mode(0o755));
+                }
+            }
+        }
+
+        // Also if root, install to /usr/local/bin for global accessibility
+        if let Ok(uid) = std::env::var("UID") {
+            if uid == "0" || std::env::var("SUDO_USER").is_ok() {
+                let usr_local_bin = PathBuf::from("/usr/local/bin");
+                if usr_local_bin.is_dir() {
+                    let global_client = usr_local_bin.join(&client_name);
+                    let _ = fs::copy(&client_exe, &global_client);
+                    #[cfg(unix)]
+                    {
+                        use std::os::unix::fs::PermissionsExt;
+                        let _ = fs::set_permissions(&global_client, fs::Permissions::from_mode(0o755));
+                    }
+                    installed_bin_paths.push(global_client);
+                }
+            }
+        }
+    }
+
+    let primary_bin = installed_bin_paths.first()
+        .cloned()
+        .unwrap_or_else(|| PathBuf::from(format!("yourtube-client{}", bin_ext)));
+
+    let manifest_path = primary_bin.to_string_lossy().to_string();
     let manifest_path = manifest_path.replace("\\", "\\\\");
 
-    println!("Installing browser manifests...");
-    install_browser_manifests(&manifest_path)?;
+    println!("Installing browser manifests for: {}", manifest_path);
+    install_browser_manifests(&manifest_path, &target_homes)?;
 
     println!("\nInstallation complete! You can now use the YourTube extension.");
     Ok(())
@@ -78,7 +139,7 @@ async fn download_yt_dlp(target_path: &PathBuf) -> Result<()> {
     Ok(())
 }
 
-fn install_browser_manifests(binary_path: &str) -> Result<()> {
+fn install_browser_manifests(binary_path: &str, target_homes: &[PathBuf]) -> Result<()> {
     let chrome_manifest = format!(
         r#"{{
   "name": "com.yourtube.client",
@@ -105,8 +166,7 @@ fn install_browser_manifests(binary_path: &str) -> Result<()> {
 
     #[cfg(windows)]
     {
-        // On Windows, Native Messaging Hosts are registered via the Registry
-        let manifest_dir = get_install_dir();
+        let manifest_dir = dirs::data_local_dir().unwrap_or_default().join("YourTube");
         let chrome_json = manifest_dir.join("com.yourtube.client.chrome.json");
         let firefox_json = manifest_dir.join("com.yourtube.client.firefox.json");
 
@@ -115,7 +175,6 @@ fn install_browser_manifests(binary_path: &str) -> Result<()> {
 
         let hkcu = RegKey::predef(HKEY_CURRENT_USER);
 
-        // Chrome/Edge/Brave
         let browsers = ["Google\\Chrome", "Chromium", "BraveSoftware\\Brave-Browser", "Microsoft\\Edge"];
         for browser in browsers {
             let path = format!("Software\\{}\\NativeMessagingHosts\\com.yourtube.client", browser);
@@ -124,7 +183,6 @@ fn install_browser_manifests(binary_path: &str) -> Result<()> {
             }
         }
 
-        // Firefox
         if let Ok((key, _)) = hkcu.create_subkey("Software\\Mozilla\\NativeMessagingHosts\\com.yourtube.client") {
             let _ = key.set_value("", &firefox_json.to_string_lossy().to_string());
         }
@@ -132,32 +190,40 @@ fn install_browser_manifests(binary_path: &str) -> Result<()> {
 
     #[cfg(not(windows))]
     {
-        let home = dirs::home_dir().unwrap_or_default();
-        
-        let chrome_dirs = vec![
-            home.join(".config/google-chrome/NativeMessagingHosts"),
-            home.join(".config/chromium/NativeMessagingHosts"),
-            home.join(".config/BraveSoftware/Brave-Browser/NativeMessagingHosts"),
-            #[cfg(target_os = "macos")]
-            home.join("Library/Application Support/Google/Chrome/NativeMessagingHosts"),
-        ];
+        for home in target_homes {
+            let chrome_dirs = vec![
+                home.join(".config/google-chrome/NativeMessagingHosts"),
+                home.join(".config/chromium/NativeMessagingHosts"),
+                home.join(".config/BraveSoftware/Brave-Browser/NativeMessagingHosts"),
+                #[cfg(target_os = "macos")]
+                home.join("Library/Application Support/Google/Chrome/NativeMessagingHosts"),
+            ];
 
-        for dir in chrome_dirs {
-            if dir.parent().map(|p| p.exists()).unwrap_or(false) {
-                fs::create_dir_all(&dir)?;
-                fs::write(dir.join("com.yourtube.client.json"), &chrome_manifest)?;
+            for dir in chrome_dirs {
+                let _ = fs::create_dir_all(&dir);
+                let _ = fs::write(dir.join("com.yourtube.client.json"), &chrome_manifest);
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::PermissionsExt;
+                    let _ = fs::set_permissions(dir.join("com.yourtube.client.json"), fs::Permissions::from_mode(0o644));
+                }
             }
-        }
 
-        let firefox_dirs = vec![
-            home.join(".mozilla/native-messaging-hosts"),
-            #[cfg(target_os = "macos")]
-            home.join("Library/Application Support/Mozilla/NativeMessagingHosts"),
-        ];
+            let firefox_dirs = vec![
+                home.join(".mozilla/native-messaging-hosts"),
+                #[cfg(target_os = "macos")]
+                home.join("Library/Application Support/Mozilla/NativeMessagingHosts"),
+            ];
 
-        for dir in firefox_dirs {
-            fs::create_dir_all(&dir)?;
-            fs::write(dir.join("com.yourtube.client.json"), &firefox_manifest)?;
+            for dir in firefox_dirs {
+                let _ = fs::create_dir_all(&dir);
+                let _ = fs::write(dir.join("com.yourtube.client.json"), &firefox_manifest);
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::PermissionsExt;
+                    let _ = fs::set_permissions(dir.join("com.yourtube.client.json"), fs::Permissions::from_mode(0o644));
+                }
+            }
         }
     }
 

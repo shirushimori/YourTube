@@ -1,7 +1,8 @@
 target/
+target_build/
 node_modules/
 .next/
 .env
 *.log
-yourtube-extension.zip
-yourtube-extension-v2.zip
+yourtube-extension*.zip
+

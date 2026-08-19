@@ -23,6 +23,7 @@
     const d = document.createElement("div"); d.textContent = str || ""; return d.innerHTML;
   }
   function formatSize(bytes) {
+    if (!bytes || bytes <= 0) return "0 B";
     if (bytes < 1024) return bytes + " B";
     if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
     if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + " MB";
@@ -47,21 +48,12 @@
     if (!d || d.length < 8) return "";
     return `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}`;
   }
-  function timeAgo(ts) {
-    const diff = Date.now() - ts;
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return "just now";
-    if (mins < 60) return mins + "m ago";
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return hours + "h ago";
-    return Math.floor(hours / 24) + "d ago";
-  }
   function getFileIcon(ext) {
-    if (!ext) return "&#128196;";
+    if (!ext) return "🎬";
     const e = ext.toLowerCase();
-    if (["mp4","webm","mkv","avi","mov","flv"].includes(e)) return "&#127909;";
-    if (["mp3","wav","flac","aac","ogg","opus","m4a"].includes(e)) return "&#127925;";
-    return "&#128196;";
+    if (["mp4","webm","mkv","avi","mov","flv"].includes(e)) return "🎬";
+    if (["mp3","wav","flac","aac","ogg","opus","m4a"].includes(e)) return "🎵";
+    return "📁";
   }
   function getMediaType(ext) {
     if (!ext) return "other";
@@ -72,7 +64,6 @@
   }
 
   // ── Settings ──
-  const defaultVideoDir = (typeof navigator !== "undefined" && navigator.platform?.includes("Win")) ? "C:\\Users\\Videos" : (typeof process !== "undefined" ? process.env.HOME + "/Videos" : "/home/" + (location.hostname || "user") + "/Videos");
   let hubSettings = { fullscreen: false, showThumbnails: true, defaultFolder: "~/Videos" };
 
   async function loadSettings() {
@@ -90,69 +81,42 @@
 
   loadSettings();
 
-  // ── Toast ──
+  // ── Toast notification ──
   function ensureToast() {
     if (document.getElementById(TOAST_ID)) return;
     const t = document.createElement("div");
     t.id = TOAST_ID;
-    setSafeHtml(t, `<div class="toast-title"></div><div class="toast-progress"><div class="toast-bar"></div></div><div class="toast-details"><span class="toast-pct"></span><span class="toast-speed"></span><span class="toast-eta"></span></div>`);
+    setSafeHtml(t, `
+      <div class="toast-title"></div>
+      <div class="toast-progress"><div class="toast-bar"></div></div>
+      <div class="toast-details"><span class="toast-pct">0%</span><span class="toast-speed"></span><span class="toast-eta"></span></div>
+    `);
     document.body.appendChild(t);
   }
+
   function showToast(title) {
     ensureToast();
     const t = document.getElementById(TOAST_ID);
     t.querySelector(".toast-title").textContent = title;
     t.querySelector(".toast-bar").style.width = "0%";
+    t.querySelector(".toast-pct").textContent = "Starting...";
+    t.querySelector(".toast-speed").textContent = "";
+    t.querySelector(".toast-eta").textContent = "";
     t.classList.add("visible");
   }
+
   function updateToast(pct, speed, eta) {
-    const t = document.getElementById(TOAST_ID); if (!t) return;
-    t.querySelector(".toast-bar").style.width = pct + "%";
-    t.querySelector(".toast-pct").textContent = pct.toFixed(1) + "%";
+    const t = document.getElementById(TOAST_ID);
+    if (!t || !t.classList.contains("visible")) return;
+    t.querySelector(".toast-bar").style.width = `${pct}%`;
+    t.querySelector(".toast-pct").textContent = `${pct.toFixed(1)}%`;
     if (speed) t.querySelector(".toast-speed").textContent = speed;
-    if (eta) t.querySelector(".toast-eta").textContent = "ETA " + eta;
+    if (eta) t.querySelector(".toast-eta").textContent = `ETA ${eta}`;
   }
-  function hideToast() { const t = document.getElementById(TOAST_ID); if (t) t.classList.remove("visible"); }
 
-  // ── Video Popup Player ──
-  function openVideoPopup(src, meta) {
-    const old = document.getElementById(VIDEO_POPUP_ID);
-    if (old) old.remove();
-
-    const popup = document.createElement("div");
-    popup.id = VIDEO_POPUP_ID;
-    setSafeHtml(popup, `
-      <div class="yt-vp-panel">
-        <div class="yt-vp-header">
-          <div class="yt-vp-title">
-            <span class="yt-vp-name">${escapeHtml(meta?.title || "Video")}</span>
-            ${meta?.channel ? `<span class="yt-vp-channel">${escapeHtml(meta.channel)}</span>` : ""}
-          </div>
-          <button class="yt-vp-close">&times;</button>
-        </div>
-        <video controls autoplay src="${escapeHtml(src)}"></video>
-        ${meta ? `
-        <div class="yt-vp-meta">
-          ${meta.description ? `<div class="yt-vp-desc">${escapeHtml(meta.description).substring(0, 300)}${meta.description.length > 300 ? "..." : ""}</div>` : ""}
-          <div class="yt-vp-stats">
-            ${meta.view_count ? `<span>&#128065; ${formatNumber(meta.view_count)}</span>` : ""}
-            ${meta.like_count ? `<span>&#128077; ${formatNumber(meta.like_count)}</span>` : ""}
-            ${meta.upload_date ? `<span>&#128197; ${formatDate(meta.upload_date)}</span>` : ""}
-            ${meta.quality ? `<span>&#9881; ${escapeHtml(meta.quality)}</span>` : ""}
-            ${meta.download_type ? `<span>${meta.download_type === "audio_only" ? "&#127925; Audio" : meta.download_type === "video_only" ? "&#127909; Video" : "&#128241; Both"}</span>` : ""}
-          </div>
-          ${meta.source ? `<div class="yt-vp-source"><a href="${escapeHtml(meta.source)}" target="_blank" rel="noopener">${escapeHtml(meta.source)}</a></div>` : ""}
-        </div>` : ""}
-      </div>
-    `);
-    document.body.appendChild(popup);
-
-    popup.querySelector(".yt-vp-close").addEventListener("click", () => {
-      popup.querySelector("video").pause(); popup.remove();
-    });
-    popup.addEventListener("click", (e) => {
-      if (e.target === popup) { popup.querySelector("video").pause(); popup.remove(); }
-    });
+  function hideToast() {
+    const t = document.getElementById(TOAST_ID);
+    if (t) setTimeout(() => t.classList.remove("visible"), 3000);
   }
 
   // ── Overlay (Download popup on video page) ──
@@ -162,64 +126,74 @@
     o.id = OVERLAY_ID;
     setSafeHtml(o, `
       <div id="yourtube-popup">
-        <div class="yt-header"><h2>Download</h2><button class="yt-close">&times;</button></div>
+        <div class="yt-header"><h2>Download Video</h2><button class="yt-close">&times;</button></div>
         <div class="yt-body">
           <div class="yt-video-info">
             <img class="yt-thumb" src="" alt="">
             <div class="yt-meta">
-              <div class="yt-title"></div>
+              <div class="yt-title">Loading...</div>
               <div class="yt-detail"></div>
             </div>
           </div>
-          <div class="yt-section"><label>Download As</label>
+          <div class="yt-section"><label>Download Type</label>
             <div class="yt-radios">
-              <label><input type="radio" name="yt_type" value="video_audio" checked><span>Both</span></label>
+              <label><input type="radio" name="yt_type" value="video_audio" checked><span>Both (Video+Audio)</span></label>
               <label><input type="radio" name="yt_type" value="video_only"><span>Video</span></label>
               <label><input type="radio" name="yt_type" value="audio_only"><span>Audio</span></label>
             </div>
           </div>
-          <div class="yt-section yt-video-quality-section"><label>Quality</label>
+          <div class="yt-section yt-video-quality-section"><label>Video Quality</label>
             <select class="yt-quality">
-              <option value="2160">2160p (4K)</option>
-              <option value="1440">1440p (2K)</option>
-              <option value="1080" selected>1080p</option>
-              <option value="720">720p</option>
-              <option value="480">480p</option>
+              <option value="2160">2160p (4K Ultra HD)</option>
+              <option value="1440">1440p (2K Quad HD)</option>
+              <option value="1080" selected>1080p (Full HD - Recommended)</option>
+              <option value="720">720p (HD)</option>
+              <option value="480">480p (Standard)</option>
               <option value="360">360p</option>
             </select>
           </div>
           <div class="yt-section yt-audio-options-section" style="display:none">
             <label>Audio Format</label>
             <select class="yt-audio-format">
-              <option value="mp3" selected>MP3</option>
-              <option value="m4a">M4A</option>
-              <option value="opus">Opus</option>
-              <option value="wav">WAV</option>
-              <option value="flac">FLAC</option>
+              <option value="mp3" selected>MP3 (Universal)</option>
+              <option value="m4a">M4A (AAC)</option>
+              <option value="opus">Opus (High Quality)</option>
+              <option value="wav">WAV (Lossless)</option>
+              <option value="flac">FLAC (Lossless)</option>
             </select>
-            <label style="margin-top:10px;display:block">Audio Quality</label>
+            <label style="margin-top:10px;display:block">Audio Quality / Bitrate</label>
             <select class="yt-audio-quality">
-              <option value="320">320 kbps (Best)</option>
-              <option value="256">256 kbps</option>
-              <option value="192" selected>192 kbps</option>
-              <option value="128">128 kbps</option>
+              <option value="320">320 kbps (Studio Quality)</option>
+              <option value="256">256 kbps (High Quality)</option>
+              <option value="192" selected>192 kbps (Standard Quality)</option>
+              <option value="128">128 kbps (Medium Quality)</option>
               <option value="96">96 kbps</option>
             </select>
           </div>
-          <div class="yt-section"><label class="yt-checkbox"><input type="checkbox" class="yt-playlist-check"><span>Download playlist</span></label></div>
-          <div class="yt-section"><label>Time Range (optional)</label>
+          <div class="yt-section">
+            <label class="yt-checkbox"><input type="checkbox" class="yt-playlist-check"><span>Download as playlist / album</span></label>
+          </div>
+          <div class="yt-section yt-playlist-folder-section" style="display:none">
+            <label>Playlist Folder Name</label>
+            <input type="text" class="yt-playlist-folder" placeholder="Folder name for playlist items">
+          </div>
+          <div class="yt-section"><label>Time Range (Optional)</label>
             <div class="yt-time-range"><input type="text" class="yt-start" placeholder="00:00:00"><span>to</span><input type="text" class="yt-end" placeholder="end"></div>
           </div>
-          <div class="yt-section"><label>Save to</label><div class="yt-path-row"><input type="text" class="yt-path" value="${hubSettings.defaultFolder}"><button class="yt-browse-btn" type="button">Browse</button></div></div>
-          <button class="yt-download-btn">Download</button>
+          <div class="yt-section"><label>Save Destination</label>
+            <div class="yt-path-row"><input type="text" class="yt-path" value="${hubSettings.defaultFolder}"><button class="yt-browse-btn" type="button">Change</button></div>
+          </div>
+          <button class="yt-download-btn">Start Download</button>
           <div class="yt-status"></div>
         </div>
       </div>
     `);
     document.body.appendChild(o);
+
     o.querySelector(".yt-close").addEventListener("click", () => o.classList.remove("visible"));
     o.addEventListener("click", (e) => { if (e.target === o) o.classList.remove("visible"); });
     o.querySelector(".yt-download-btn").addEventListener("click", handleDownload);
+
     o.querySelector(".yt-browse-btn").addEventListener("click", () => {
       const pathInput = o.querySelector(".yt-path");
       const newPath = prompt("Enter download folder path:", pathInput.value);
@@ -230,13 +204,20 @@
       }
     });
 
-    // Toggle quality vs audio options based on download type
+    // Toggle quality vs audio options
     o.querySelectorAll('input[name="yt_type"]').forEach((radio) => {
       radio.addEventListener("change", () => {
         const isAudio = radio.value === "audio_only";
         o.querySelector(".yt-video-quality-section").style.display = isAudio ? "none" : "";
         o.querySelector(".yt-audio-options-section").style.display = isAudio ? "" : "none";
       });
+    });
+
+    // Toggle playlist folder input
+    const plCheck = o.querySelector(".yt-playlist-check");
+    const plSec = o.querySelector(".yt-playlist-folder-section");
+    plCheck.addEventListener("change", () => {
+      plSec.style.display = plCheck.checked ? "" : "none";
     });
   }
 
@@ -249,9 +230,15 @@
     const quality = overlay.querySelector(".yt-quality").value;
     const audioFormat = overlay.querySelector(".yt-audio-format").value;
     const audioBitrate = overlay.querySelector(".yt-audio-quality").value;
+    const isPlaylist = overlay.querySelector(".yt-playlist-check").checked;
+    const playlistFolder = overlay.querySelector(".yt-playlist-folder").value.trim();
     const startTime = overlay.querySelector(".yt-start").value || null;
     const endTime = overlay.querySelector(".yt-end").value || null;
-    const outputDir = overlay.querySelector(".yt-path").value.trim();
+    let outputDir = overlay.querySelector(".yt-path").value.trim();
+
+    if (isPlaylist && playlistFolder) {
+      outputDir = outputDir.replace(/\/+$/, "") + "/" + playlistFolder;
+    }
 
     btn.disabled = true;
     status.className = "yt-status visible loading";
@@ -267,7 +254,7 @@
       }
 
       status.className = "yt-status visible loading";
-      status.textContent = "Starting download...";
+      status.textContent = "Starting download in highest quality...";
       showToast(meta.title || "Downloading...");
 
       chrome.runtime.sendMessage({
@@ -313,7 +300,7 @@
         status.textContent = parts.join("  |  ");
       }
       if (msg.status === "finished" || msg.status === "completed") {
-        if (status) { status.className = "yt-status visible success"; status.textContent = "Done! " + (msg.total_size || ""); }
+        if (status) { status.className = "yt-status visible success"; status.textContent = "Done! Download complete."; }
         hideToast();
       }
     } else if (msg.type === "error") {
@@ -323,12 +310,12 @@
   });
 
   // ══════════════════════════════════════════
-  // ── Downloads Hub ──
+  // ── Downloads Hub (YouTube Homepage Style)
   // ══════════════════════════════════════════
-  let hubOpenMode = "tab";
   let hubFilter = "all";
   let hubTracked = [];
   let hubFileList = [];
+  let hubSearchQuery = "";
 
   function ensureHub() {
     if (document.getElementById(HUB_ID)) return;
@@ -337,33 +324,28 @@
     setSafeHtml(hub, `
       <div class="yt-hub-panel">
         <div class="yt-hub-header">
-          <h2>Downloads Hub</h2>
+          <h2><span>YourTube</span> Downloads Hub</h2>
           <div class="yt-hub-header-actions">
             <button class="yt-hub-close">&times;</button>
           </div>
         </div>
         <div class="yt-hub-settings">
-          <label>Folder</label>
           <div class="yt-hub-folder">
             <input type="text" class="yt-hub-path" value="${hubSettings.defaultFolder}" placeholder="Download folder path">
             <button class="yt-hub-refresh">Refresh</button>
           </div>
+          <input type="text" class="yt-hub-search-box" placeholder="🔍 Search downloads...">
         </div>
         <div class="yt-hub-tabs">
           <button class="yt-hub-tab active" data-tab="all">All</button>
-          <button class="yt-hub-tab" data-tab="video">Video</button>
+          <button class="yt-hub-tab" data-tab="video">Videos</button>
           <button class="yt-hub-tab" data-tab="audio">Audio</button>
           <button class="yt-hub-tab" data-tab="tracked">Tracked</button>
-          <button class="yt-hub-tab" data-tab="playlists">Playlists</button>
         </div>
         <div class="yt-hub-content">
-          <div class="yt-hub-list" id="yt-hub-all"></div>
-          <div class="yt-hub-list hidden" id="yt-hub-video"></div>
-          <div class="yt-hub-list hidden" id="yt-hub-audio"></div>
-          <div class="yt-hub-list hidden" id="yt-hub-tracked"></div>
-          <div class="yt-hub-list hidden" id="yt-hub-playlists"></div>
+          <div class="yt-hub-grid" id="yt-hub-grid"></div>
+          <div class="yt-hub-empty hidden">No downloads found</div>
         </div>
-        <div class="yt-hub-empty hidden">No downloads found</div>
       </div>
     `);
     document.body.appendChild(hub);
@@ -371,15 +353,13 @@
     hub.querySelector(".yt-hub-close").addEventListener("click", () => hub.classList.remove("visible"));
     hub.addEventListener("click", (e) => { if (e.target === hub) hub.classList.remove("visible"); });
 
-
-
     // Filter tabs
     hub.querySelectorAll(".yt-hub-tab").forEach((tab) => {
       tab.addEventListener("click", () => {
         hub.querySelectorAll(".yt-hub-tab").forEach((t) => t.classList.remove("active"));
         tab.classList.add("active");
         hubFilter = tab.dataset.tab;
-        applyFilter();
+        renderFileLists();
       });
     });
 
@@ -390,99 +370,94 @@
       loadHubFiles();
     });
 
+    hub.querySelector(".yt-hub-search-box").addEventListener("input", (e) => {
+      hubSearchQuery = e.target.value.toLowerCase().trim();
+      renderFileLists();
+    });
+
     loadHubFiles();
     loadTrackedDownloads();
-    loadPlaylists();
-  }
-
-  function applyFilter() {
-    const hub = document.getElementById(HUB_ID); if (!hub) return;
-    ["all","video","audio","tracked","playlists"].forEach((f) => {
-      const el = hub.querySelector(`#yt-hub-${f}`);
-      if (el) el.classList.toggle("hidden", hubFilter !== f);
-    });
-    const empty = hub.querySelector(".yt-hub-empty");
-    const visibleList = hub.querySelector(`#yt-hub-${hubFilter}`);
-    const hasItems = visibleList && visibleList.children.length > 0;
-    empty.classList.toggle("hidden", hasItems);
-    if (!hasItems) {
-      empty.textContent = hubFilter === "playlists" ? "No playlists yet" : "No downloads found";
-    }
   }
 
   async function loadHubFiles() {
     const hub = document.getElementById(HUB_ID); if (!hub) return;
     const dir = hub.querySelector(".yt-hub-path").value.trim() || hubSettings.defaultFolder;
-    const allList = hub.querySelector("#yt-hub-all");
+    const grid = hub.querySelector("#yt-hub-grid");
     const empty = hub.querySelector(".yt-hub-empty");
 
-    setSafeHtml(allList, '<div class="yt-hub-loading">Loading...</div>');
+    setSafeHtml(grid, '<div class="yt-hub-loading">Loading downloaded media...</div>');
     empty.classList.add("hidden");
 
     try {
       const result = await chrome.runtime.sendMessage({ type: "list_downloads", directory: dir });
       if (!result || result.type === "error") {
-        setSafeHtml(allList, `<div class="yt-hub-error">${(result && result.message) || "Failed to load. Is the native client running?"}</div>`);
+        setSafeHtml(grid, `<div class="yt-hub-error">${(result && result.message) || "Failed to load. Make sure YourTube native client is installed."}</div>`);
         return;
       }
 
       hubFileList = result.files || [];
       renderFileLists();
     } catch (err) {
-      setSafeHtml(allList, `<div class="yt-hub-error">Connection error: ${err.message || "Native client not found"}</div>`);
+      setSafeHtml(grid, `<div class="yt-hub-error">Connection error: ${err.message || "Native client not found"}</div>`);
     }
   }
 
   function renderFileLists() {
     const hub = document.getElementById(HUB_ID); if (!hub) return;
-    const allList = hub.querySelector("#yt-hub-all");
-    const videoList = hub.querySelector("#yt-hub-video");
-    const audioList = hub.querySelector("#yt-hub-audio");
+    const grid = hub.querySelector("#yt-hub-grid");
+    const empty = hub.querySelector(".yt-hub-empty");
 
-    const videoFiles = hubFileList.filter((f) => getMediaType(f.ext) === "video");
-    const audioFiles = hubFileList.filter((f) => getMediaType(f.ext) === "audio");
+    let files = hubFileList;
 
-    setSafeHtml(allList, renderFileItems(hubFileList));
-    setSafeHtml(videoList, renderFileItems(videoFiles));
-    setSafeHtml(audioList, renderFileItems(audioFiles));
+    if (hubFilter === "video") {
+      files = files.filter((f) => getMediaType(f.ext) === "video");
+    } else if (hubFilter === "audio") {
+      files = files.filter((f) => getMediaType(f.ext) === "audio");
+    } else if (hubFilter === "tracked") {
+      renderTrackedList();
+      return;
+    }
+
+    if (hubSearchQuery) {
+      files = files.filter((f) => f.name.toLowerCase().includes(hubSearchQuery));
+    }
+
+    if (files.length === 0) {
+      setSafeHtml(grid, "");
+      empty.classList.remove("hidden");
+      return;
+    }
+
+    empty.classList.add("hidden");
+    setSafeHtml(grid, renderCardsHtml(files));
 
     // Attach click handlers
-    [allList, videoList, audioList].forEach((list) => {
-      list.querySelectorAll(".yt-hub-item").forEach((item) => {
-        item.addEventListener("click", (e) => {
-          if (e.target.closest(".yt-hub-play-btn")) return;
-          handleFileItemClick(item);
-        });
-        const playBtn = item.querySelector(".yt-hub-play-btn");
-        if (playBtn) {
-          playBtn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            handleFileItemClick(item);
-          });
-        }
-      });
+    grid.querySelectorAll(".yt-hub-card").forEach((card) => {
+      card.addEventListener("click", () => handleCardClick(card));
     });
-
-    applyFilter();
   }
 
-  function renderFileItems(files) {
-    if (files.length === 0) return '<div class="yt-hub-empty-inline">No files</div>';
-    const thumb = hubSettings.fullscreen && hubSettings.showThumbnails;
-
+  function renderCardsHtml(files) {
     return files.map((f) => {
       const isVideo = getMediaType(f.ext) === "video";
-      const thumbUrl = isVideo ? `https://i.ytimg.com/vi/${guessVideoId(f.name)}/hqdefault.jpg` : "";
+      const vid = guessVideoId(f.name);
+      const thumbUrl = vid ? `https://i.ytimg.com/vi/${vid}/hqdefault.jpg` : "";
 
       return `
-        <div class="yt-hub-item ${isVideo ? "is-video" : "is-audio"}" data-path="${escapeHtml(f.path)}" data-name="${escapeHtml(f.name)}" data-ext="${escapeHtml(f.ext || "")}" ${thumb && isVideo ? `style="background-image:url('${thumbUrl}')"` : ""}>
-          <div class="yt-hub-item-inner">
-            <div class="yt-hub-icon">${getFileIcon(f.ext)}</div>
-            <div class="yt-hub-info">
-              <div class="yt-hub-name" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</div>
-              <div class="yt-hub-meta">${formatSize(f.size)} &middot; ${escapeHtml(f.modified)}</div>
+        <div class="yt-hub-card" data-path="${escapeHtml(f.path)}" data-name="${escapeHtml(f.name)}" data-ext="${escapeHtml(f.ext || "")}" data-vid="${escapeHtml(vid)}">
+          <div class="yt-hub-card-thumb">
+            ${thumbUrl ? `<img src="${thumbUrl}" alt="">` : `<div class="yt-card-icon">${getFileIcon(f.ext)}</div>`}
+            <span class="yt-card-badge">${escapeHtml(f.ext?.toUpperCase() || "FILE")}</span>
+          </div>
+          <div class="yt-hub-card-body">
+            <div class="yt-hub-card-title" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</div>
+            <div class="yt-hub-card-meta">
+              <span>${formatSize(f.size)}</span>
+              <span>${escapeHtml(f.modified)}</span>
             </div>
-            <button class="yt-hub-play-btn" title="Play">&#9654;</button>
+            <div class="yt-hub-card-actions">
+              <button class="yt-hub-card-play-btn">▶ Watch in Player</button>
+            </div>
           </div>
         </div>
       `;
@@ -497,15 +472,15 @@
     return "";
   }
 
-  function handleFileItemClick(item) {
-    const path = item.dataset.path;
-    const name = item.dataset.name;
-    const ext = item.dataset.ext;
+  function handleCardClick(card) {
+    const path = card.dataset.path;
+    const name = card.dataset.name;
+    const vid = card.dataset.vid;
 
-    // Try to match against tracked downloads for metadata
+    // Match metadata from tracked downloads
     const tracked = hubTracked.find((t) => {
       if (!t.file_path) return false;
-      return path.includes(t.file_path) || t.file_path.includes(path);
+      return path.includes(t.file_path) || t.file_path.includes(path) || (vid && t.url?.includes(vid));
     });
 
     const meta = tracked ? {
@@ -515,310 +490,279 @@
       view_count: tracked.view_count,
       like_count: tracked.like_count,
       upload_date: tracked.upload_date,
-      source: tracked.source,
+      source: tracked.source || (vid ? `https://www.youtube.com/watch?v=${vid}` : ""),
       quality: tracked.quality,
       download_type: tracked.download_type,
-    } : { title: name.replace(/\.[^.]+$/, "") };
+      thumbnail: tracked.thumbnail || (vid ? `https://i.ytimg.com/vi/${vid}/maxresdefault.jpg` : ""),
+    } : {
+      title: name.replace(/\.[^.]+$/, ""),
+      thumbnail: vid ? `https://i.ytimg.com/vi/${vid}/maxresdefault.jpg` : "",
+      source: vid ? `https://www.youtube.com/watch?v=${vid}` : "",
+    };
 
-    serveAndPlay(path, name, meta, item);
+    serveAndPlay(path, name, meta, card);
   }
 
-  async function serveAndPlay(path, name, meta, item) {
-    const playBtn = item?.querySelector(".yt-hub-play-btn");
-    if (playBtn) { playBtn.disabled = true; playBtn.textContent = "..."; }
+  async function serveAndPlay(path, name, meta, card) {
+    const playBtn = card?.querySelector(".yt-hub-card-play-btn");
+    if (playBtn) { playBtn.disabled = true; playBtn.textContent = "Loading..."; }
 
-    const result = await chrome.runtime.sendMessage({ type: "serve_file", path });
+    try {
+      const result = await chrome.runtime.sendMessage({ type: "serve_file", path });
+      if (playBtn) { playBtn.disabled = false; playBtn.textContent = "▶ Watch in Player"; }
+      if (!result || result.type === "error") {
+        alert("Failed to stream file: " + (result?.message || "Unknown"));
+        return;
+      }
 
-    if (playBtn) { playBtn.disabled = false; setSafeHtml(playBtn, "&#9654;"); }
-    if (!result || result.type === "error") { alert("Failed: " + (result?.message || "Unknown")); return; }
+      openCustomPlayerTab(result.url, name, meta);
+    } catch (err) {
+      if (playBtn) { playBtn.disabled = false; playBtn.textContent = "▶ Watch in Player"; }
+      alert("Error: " + err.message);
+    }
+  }
 
-    if (hubOpenMode === "tab") {
-      const title = escapeHtml(meta?.title || name);
-      const channel = meta?.channel ? escapeHtml(meta.channel) : "";
-      const desc = meta?.description ? escapeHtml(meta.description).substring(0, 500) : "";
-      const html = `<!DOCTYPE html><html><head><title>${title} - YourTube</title>
+  // ══════════════════════════════════════════
+  // ── Custom Video Player Tab
+  // ══════════════════════════════════════════
+  function openCustomPlayerTab(streamUrl, name, meta) {
+    const title = escapeHtml(meta?.title || name);
+    const channel = meta?.channel ? escapeHtml(meta.channel) : "Local Video";
+    const desc = meta?.description ? escapeHtml(meta.description) : "Downloaded locally via YourTube.";
+    const thumb = meta?.thumbnail || "";
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${title} - YourTube Player</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#0f0f0f;color:#f1f1f1;font-family:"Roboto","Arial",sans-serif}
-.yt-page{max-width:1280px;margin:0 auto;padding:24px;display:grid;grid-template-columns:1fr 400px;gap:24px}
-@media(max-width:960px){.yt-page{grid-template-columns:1fr;}}
-.yt-player{background:#000;border-radius:12px;overflow:hidden}
-.yt-player video{width:100%;display:block;max-height:72vh}
-.yt-info{padding:16px 0}
-.yt-info h1{font-size:20px;font-weight:600;line-height:1.4;margin-bottom:8px}
-.yt-channel{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #272727}
-.yt-channel-avatar{width:40px;height:40px;border-radius:50%;background:#272727;display:flex;align-items:center;justify-content:center;font-size:18px;color:#aaa}
-.yt-channel-name{font-size:16px;font-weight:500}
-.yt-desc{background:#272727;border-radius:12px;padding:12px 16px;margin-top:16px;font-size:14px;line-height:1.6;color:#aaa;white-space:pre-wrap}
-.yt-sidebar{background:#121212;border-radius:12px;padding:20px;height:fit-content}
-.yt-sidebar h3{font-size:14px;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px}
-.yt-sidebar-item{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #272727;font-size:13px}
-.yt-sidebar-item span:first-child{color:#aaa}
-.yt-sidebar-item span:last-child{color:#f1f1f1;font-weight:500}
-.yt-topbar{background:#0f0f0f;padding:12px 24px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #272727}
-.yt-topbar-logo{font-size:20px;font-weight:700;color:#f1f1f1;text-decoration:none}
-.yt-topbar-logo span{color:#ff4444}
-</style></head><body>
-<div class="yt-topbar"><span class="yt-topbar-logo">Your<span>Tube</span></span></div>
-<div class="yt-page">
+body{background:#0f0f0f;color:#f1f1f1;font-family:"Roboto",Arial,sans-serif;overflow-x:hidden}
+.topbar{background:#0f0f0f;padding:12px 28px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #222;position:sticky;top:0;z-index:100}
+.logo{font-size:20px;font-weight:700;color:#fff;display:flex;align-items:center;gap:6px;text-decoration:none}
+.logo span{color:#ff4444}
+.meta-btn{padding:8px 16px;border-radius:20px;border:1px solid #333;background:rgba(255,255,255,0.08);color:#fff;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all 0.15s}
+.meta-btn:hover{background:rgba(255,255,255,0.18)}
+
+.watch-container{max-width:1440px;margin:0 auto;padding:24px;display:grid;grid-template-columns:1fr 380px;gap:24px}
+@media(max-width:1080px){.watch-container{grid-template-columns:1fr;}}
+
+.player-wrapper{position:relative;background:#000;border-radius:16px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.8)}
+video{width:100%;display:block;max-height:76vh;background:#000;outline:none}
+
+/* Idle Paused Overlay */
+.idle-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);display:flex;flex-direction:column;justify-content:center;align-items:center;opacity:0;pointer-events:none;transition:opacity 0.4s ease}
+.idle-overlay.visible{opacity:1;pointer-events:auto}
+.idle-thumb{width:360px;max-width:80%;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,0.9);margin-bottom:16px}
+.idle-title{font-size:18px;font-weight:600;color:#fff;text-align:center;padding:0 20px;max-width:600px}
+.idle-resume-btn{margin-top:16px;padding:10px 24px;border-radius:24px;background:#ff4444;color:#fff;border:none;font-size:14px;font-weight:600;cursor:pointer}
+
+.video-info{padding:18px 0}
+.video-title{font-size:20px;font-weight:600;line-height:1.4;margin-bottom:12px}
+.channel-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #222}
+.channel-info{display:flex;align-items:center;gap:12px}
+.channel-avatar{width:42px;height:42px;border-radius:50%;background:#ff4444;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;color:#fff}
+.channel-name{font-size:16px;font-weight:600}
+.channel-sub{font-size:12px;color:#aaa}
+
+.desc-card{background:#222;border-radius:12px;padding:16px;margin-top:16px;line-height:1.6;font-size:14px}
+.desc-meta{font-weight:600;font-size:13px;margin-bottom:8px;color:#ddd}
+.desc-text{color:#ccc;white-space:pre-wrap;max-height:160px;overflow-y:auto}
+
+.sidebar-card{background:#181818;border-radius:14px;padding:20px;border:1px solid #262626;height:fit-content}
+.sidebar-card h3{font-size:15px;font-weight:600;margin-bottom:16px;color:#fff;border-bottom:1px solid #282828;padding-bottom:10px}
+.detail-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #222;font-size:13px}
+.detail-row span:first-child{color:#888}
+.detail-row span:last-child{color:#fff;font-weight:500;text-align:right}
+
+/* Metadata Modal Popup */
+.meta-modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:none;justify-content:center;align-items:center;z-index:999}
+.meta-modal.visible{display:flex}
+.modal-content{background:#222;border-radius:16px;width:520px;max-width:92vw;padding:24px;box-shadow:0 16px 50px rgba(0,0,0,0.9);color:#fff}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;border-bottom:1px solid #333;padding-bottom:12px}
+.modal-header h2{font-size:18px}
+.modal-close{background:none;border:none;color:#aaa;font-size:24px;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a class="logo" href="#">Your<span>Tube</span> Player</a>
+  <button class="meta-btn" id="open-meta-btn">📊 Video Metadata</button>
+</div>
+
+<div class="watch-container">
   <div>
-    <div class="yt-player"><video controls autoplay src="${result.url}"></video></div>
-    <div class="yt-info">
-      <h1>${title}</h1>
-      ${channel ? `<div class="yt-channel"><div class="yt-channel-avatar">▶</div><div class="yt-channel-name">${channel}</div></div>` : ""}
-      ${desc ? `<div class="yt-desc">${desc}</div>` : ""}
+    <div class="player-wrapper">
+      <video id="vid-player" controls autoplay src="${streamUrl}"></video>
+      <div class="idle-overlay" id="idle-overlay">
+        ${thumb ? `<img class="idle-thumb" src="${thumb}" alt="">` : ""}
+        <div class="idle-title">${title}</div>
+        <button class="idle-resume-btn" id="resume-btn">▶ Click to Resume</button>
+      </div>
+    </div>
+    <div class="video-info">
+      <h1 class="video-title">${title}</h1>
+      <div class="channel-row">
+        <div class="channel-info">
+          <div class="channel-avatar">${channel.charAt(0).toUpperCase()}</div>
+          <div>
+            <div class="channel-name">${channel}</div>
+            <div class="channel-sub">Local Playback</div>
+          </div>
+        </div>
+      </div>
+      <div class="desc-card">
+        <div class="desc-meta">${meta?.upload_date ? formatDate(meta.upload_date) + " • " : ""}${meta?.view_count ? formatNumber(meta.view_count) + " views" : "Offline Media"}</div>
+        <div class="desc-text">${desc}</div>
+      </div>
     </div>
   </div>
-  <div class="yt-sidebar">
-    <h3>File Details</h3>
-    <div class="yt-sidebar-item"><span>File</span><span>${escapeHtml(name)}</span></div>
-    ${meta?.quality ? `<div class="yt-sidebar-item"><span>Quality</span><span>${escapeHtml(meta.quality)}</span></div>` : ""}
-    ${meta?.download_type ? `<div class="yt-sidebar-item"><span>Type</span><span>${escapeHtml(meta.download_type)}</span></div>` : ""}
-    ${meta?.upload_date ? `<div class="yt-sidebar-item"><span>Upload Date</span><span>${formatDate(meta.upload_date)}</span></div>` : ""}
-    ${meta?.view_count ? `<div class="yt-sidebar-item"><span>Views</span><span>${formatNumber(meta.view_count)}</span></div>` : ""}
-    ${meta?.like_count ? `<div class="yt-sidebar-item"><span>Likes</span><span>${formatNumber(meta.like_count)}</span></div>` : ""}
-    ${meta?.source ? `<div class="yt-sidebar-item"><span>Source</span><span><a href="${escapeHtml(meta.source)}" style="color:#4da6ff" target="_blank">YouTube</a></span></div>` : ""}
+
+  <div>
+    <div class="sidebar-card">
+      <h3>File Details</h3>
+      <div class="detail-row"><span>File Name</span><span>${escapeHtml(name)}</span></div>
+      ${meta?.quality ? `<div class="detail-row"><span>Quality</span><span>${escapeHtml(meta.quality)}</span></div>` : ""}
+      ${meta?.download_type ? `<div class="detail-row"><span>Type</span><span>${escapeHtml(meta.download_type)}</span></div>` : ""}
+      ${meta?.upload_date ? `<div class="detail-row"><span>Upload Date</span><span>${formatDate(meta.upload_date)}</span></div>` : ""}
+      ${meta?.view_count ? `<div class="detail-row"><span>Views</span><span>${formatNumber(meta.view_count)}</span></div>` : ""}
+      ${meta?.like_count ? `<div class="detail-row"><span>Likes</span><span>${formatNumber(meta.like_count)}</span></div>` : ""}
+      ${meta?.source ? `<div class="detail-row"><span>Source URL</span><span><a href="${escapeHtml(meta.source)}" style="color:#4da6ff;text-decoration:none" target="_blank">Open YouTube</a></span></div>` : ""}
+    </div>
   </div>
 </div>
-</body></html>`;
-      const blob = new Blob([html], { type: "text/html" });
-      window.open(URL.createObjectURL(blob), "_blank");
-    } else {
-      openVideoPopup(result.url, meta);
-    }
+
+<div class="meta-modal" id="meta-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>📊 Video Metadata</h2>
+      <button class="modal-close" id="close-meta-btn">&times;</button>
+    </div>
+    <div class="detail-row"><span>Title</span><span>${title}</span></div>
+    <div class="detail-row"><span>Channel</span><span>${channel}</span></div>
+    <div class="detail-row"><span>File</span><span>${escapeHtml(name)}</span></div>
+    ${meta?.quality ? `<div class="detail-row"><span>Resolution/Quality</span><span>${escapeHtml(meta.quality)}</span></div>` : ""}
+    ${meta?.upload_date ? `<div class="detail-row"><span>Uploaded</span><span>${formatDate(meta.upload_date)}</span></div>` : ""}
+    ${meta?.view_count ? `<div class="detail-row"><span>View Count</span><span>${formatNumber(meta.view_count)}</span></div>` : ""}
+    ${meta?.like_count ? `<div class="detail-row"><span>Like Count</span><span>${formatNumber(meta.like_count)}</span></div>` : ""}
+  </div>
+</div>
+
+<script>
+const video = document.getElementById("vid-player");
+const overlay = document.getElementById("idle-overlay");
+const resumeBtn = document.getElementById("resume-btn");
+const metaBtn = document.getElementById("open-meta-btn");
+const metaModal = document.getElementById("meta-modal");
+const closeMeta = document.getElementById("close-meta-btn");
+
+let idleTimer = null;
+
+function resetIdle() {
+  overlay.classList.remove("visible");
+  clearTimeout(idleTimer);
+  if (video.paused && !video.ended) {
+    idleTimer = setTimeout(() => overlay.classList.add("visible"), 2500);
+  }
+}
+
+video.addEventListener("pause", resetIdle);
+video.addEventListener("play", () => {
+  overlay.classList.remove("visible");
+  clearTimeout(idleTimer);
+});
+video.addEventListener("mousemove", resetIdle);
+resumeBtn.addEventListener("click", () => video.play());
+
+metaBtn.addEventListener("click", () => metaModal.classList.add("visible"));
+closeMeta.addEventListener("click", () => metaModal.classList.remove("visible"));
+metaModal.addEventListener("click", (e) => { if (e.target === metaModal) metaModal.classList.remove("visible"); });
+
+// Keyboard shortcuts
+window.addEventListener("keydown", (e) => {
+  if (e.code === "Space") { e.preventDefault(); video.paused ? video.play() : video.pause(); }
+  if (e.code === "KeyF") { if (document.fullscreenElement) document.exitFullscreen(); else video.requestFullscreen(); }
+  if (e.code === "KeyM") { video.muted = !video.muted; }
+  if (e.code === "ArrowLeft") { video.currentTime = Math.max(0, video.currentTime - 5); }
+  if (e.code === "ArrowRight") { video.currentTime = Math.min(video.duration, video.currentTime + 5); }
+});
+</script>
+</body>
+</html>`;
+
+    const blob = new Blob([html], { type: "text/html" });
+    window.open(URL.createObjectURL(blob), "_blank");
   }
 
   // ── Tracked downloads ──
   async function loadTrackedDownloads() {
-    const hub = document.getElementById(HUB_ID); if (!hub) return;
-    const list = hub.querySelector("#yt-hub-tracked");
     try {
       const result = await chrome.runtime.sendMessage({ type: "get_tracked_downloads" });
       hubTracked = result?.downloads || [];
-      renderTrackedList();
-    } catch {
-      setSafeHtml(list, '<div class="yt-hub-error">Failed to load</div>');
-    }
+    } catch {}
   }
 
   function renderTrackedList() {
     const hub = document.getElementById(HUB_ID); if (!hub) return;
-    const list = hub.querySelector("#yt-hub-tracked");
+    const grid = hub.querySelector("#yt-hub-grid");
+    const empty = hub.querySelector(".yt-hub-empty");
 
-    const filtered = hubFilter === "all" ? hubTracked :
-      hubTracked.filter((d) => {
-        if (hubFilter === "video") return d.download_type !== "audio_only";
-        if (hubFilter === "audio") return d.download_type === "audio_only";
-        return true;
-      });
-
-    if (filtered.length === 0) { setSafeHtml(list, '<div class="yt-hub-empty-inline">No tracked downloads</div>'); applyFilter(); return; }
-
-    setSafeHtml(list, filtered.map((d) => `
-      <div class="yt-hub-item tracked ${d.status}" data-url="${escapeHtml(d.url)}" data-id="${d.id || ""}">
-        <div class="yt-hub-item-inner">
-          ${d.thumbnail ? `<img class="yt-hub-thumb" src="${escapeHtml(d.thumbnail)}" alt="">` : `<div class="yt-hub-icon">${d.status === "completed" ? "&#10003;" : "&#9654;"}</div>`}
-          <div class="yt-hub-info">
-            <div class="yt-hub-name" title="${escapeHtml(d.title || d.url)}">${escapeHtml(d.title || "Untitled")}</div>
-            <div class="yt-hub-meta">
-              ${d.channel ? `<span class="yt-hub-channel">${escapeHtml(d.channel)}</span>` : ""}
-              ${d.quality ? `<span>${escapeHtml(d.quality)}p</span>` : ""}
-              <span>${d.download_type === "audio_only" ? "&#127925; Audio" : d.download_type === "video_only" ? "&#127909; Video" : "&#128241; Both"}</span>
-              <span>${d.status}</span>
-              <span>${timeAgo(d.timestamp)}</span>
-            </div>
-            ${d.view_count || d.like_count ? `<div class="yt-hub-stats">${d.view_count ? "&#128065; " + formatNumber(d.view_count) : ""} ${d.like_count ? "&#128077; " + formatNumber(d.like_count) : ""}</div>` : ""}
-          </div>
-          <button class="yt-hub-play-btn" title="Open">&#8599;</button>
-        </div>
-      </div>
-    `).join(""));
-
-    list.querySelectorAll(".yt-hub-item.tracked").forEach((item) => {
-      item.addEventListener("click", (e) => {
-        if (e.target.closest(".yt-hub-play-btn")) return;
-        const d = filtered.find((x) => String(x.id) === item.dataset.id || x.url === item.dataset.url);
-        if (d?.status === "completed" && d.file_path) {
-          serveAndPlay(d.file_path, d.title || "video", d, item);
-        } else {
-          window.open(item.dataset.url, "_blank");
-        }
-      });
-      const playBtn = item.querySelector(".yt-hub-play-btn");
-      if (playBtn) {
-        playBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          const d = filtered.find((x) => String(x.id) === item.dataset.id || x.url === item.dataset.url);
-          if (d?.status === "completed" && d.file_path) {
-            serveAndPlay(d.file_path, d.title || "video", d, item);
-          } else {
-            window.open(item.dataset.url, "_blank");
-          }
-        });
-      }
-    });
-
-    applyFilter();
-  }
-
-  // ── Playlists ──
-  async function loadPlaylists() {
-    const hub = document.getElementById(HUB_ID); if (!hub) return;
-    const list = hub.querySelector("#yt-hub-playlists");
-    try {
-      const result = await chrome.runtime.sendMessage({ type: "get_playlists" });
-      const playlists = result?.playlists || [];
-      renderPlaylists(playlists);
-    } catch {
-      setSafeHtml(list, '<div class="yt-hub-error">Failed to load playlists</div>');
-    }
-  }
-
-  function renderPlaylists(playlists) {
-    const hub = document.getElementById(HUB_ID); if (!hub) return;
-    const list = hub.querySelector("#yt-hub-playlists");
-
-    const header = `
-      <div class="yt-hub-playlist-actions">
-        <button class="yt-hub-create-playlist">+ New Playlist</button>
-        <button class="yt-hub-import-playlist">Import</button>
-      </div>
-    `;
-
-    if (playlists.length === 0) {
-      setSafeHtml(list, header + '<div class="yt-hub-empty-inline">No playlists yet</div>');
-      attachPlaylistHandlers([]);
-      applyFilter();
+    if (hubTracked.length === 0) {
+      setSafeHtml(grid, "");
+      empty.classList.remove("hidden");
       return;
     }
 
-    setSafeHtml(list, header + playlists.map((pl) => `
-      <div class="yt-hub-playlist-card" data-id="${pl.id}">
-        <div class="yt-hub-playlist-header">
-          <span class="yt-hub-playlist-name">${escapeHtml(pl.name)}</span>
-          <span class="yt-hub-playlist-count">${pl.items?.length || 0} items</span>
-          <div class="yt-hub-playlist-btns">
-            <button class="yt-hub-pl-export" title="Export">&#8681;</button>
-            <button class="yt-hub-pl-delete" title="Delete">&#128465;</button>
+    empty.classList.add("hidden");
+    const html = hubTracked.map((d) => `
+      <div class="yt-hub-card" data-path="${escapeHtml(d.file_path || "")}" data-name="${escapeHtml(d.title || "Video")}">
+        <div class="yt-hub-card-thumb">
+          ${d.thumbnail ? `<img src="${escapeHtml(d.thumbnail)}" alt="">` : `<div class="yt-card-icon">🎬</div>`}
+          <span class="yt-card-badge">${escapeHtml(d.quality || "HD")}</span>
+        </div>
+        <div class="yt-hub-card-body">
+          <div class="yt-hub-card-title">${escapeHtml(d.title || "Video")}</div>
+          <div class="yt-hub-card-meta">
+            <span>${escapeHtml(d.channel || "YouTube")}</span>
+            <span>${d.status || "completed"}</span>
           </div>
         </div>
-        <div class="yt-hub-playlist-items">
-          ${(pl.items || []).slice(0, 5).map((item) => `
-            <div class="yt-hub-playlist-item">
-              <span class="yt-hub-pl-item-title">${escapeHtml(item.title || "Untitled")}</span>
-              <span class="yt-hub-pl-item-meta">${escapeHtml(item.quality || "")}p &middot; ${item.download_type === "audio_only" ? "Audio" : item.download_type === "video_only" ? "Video" : "Both"}</span>
-            </div>
-          `).join("")}
-          ${(pl.items || []).length > 5 ? `<div class="yt-hub-pl-more">+${pl.items.length - 5} more</div>` : ""}
-        </div>
       </div>
-    `).join(""));
+    `).join("");
 
-    attachPlaylistHandlers(playlists);
-    applyFilter();
-  }
-
-  function attachPlaylistHandlers(playlists) {
-    const hub = document.getElementById(HUB_ID); if (!hub) return;
-
-    hub.querySelector(".yt-hub-create-playlist")?.addEventListener("click", async () => {
-      const name = prompt("Playlist name:");
-      if (!name) return;
-      await chrome.runtime.sendMessage({ type: "save_playlist", name, items: [] });
-      loadPlaylists();
-    });
-
-    hub.querySelector(".yt-hub-import-playlist")?.addEventListener("click", () => {
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = ".json";
-      input.addEventListener("change", async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        try {
-          const text = await file.text();
-          const data = JSON.parse(text);
-          await chrome.runtime.sendMessage({
-            type: "save_playlist",
-            name: data.name || "Imported Playlist",
-            items: data.items || [],
-          });
-          loadPlaylists();
-        } catch (err) {
-          alert("Invalid playlist file");
-        }
-      });
-      input.click();
-    });
-
-    hub.querySelectorAll(".yt-hub-pl-export").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const card = btn.closest(".yt-hub-playlist-card");
-        const pl = playlists.find((p) => String(p.id) === card?.dataset.id);
-        if (!pl) return;
-        const blob = new Blob([JSON.stringify(pl, null, 2)], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url; a.download = `${pl.name.replace(/[^a-z0-9]/gi, "_")}.json`;
-        a.click(); URL.revokeObjectURL(url);
-      });
-    });
-
-    hub.querySelectorAll(".yt-hub-pl-delete").forEach((btn) => {
-      btn.addEventListener("click", async (e) => {
-        e.stopPropagation();
-        if (!confirm("Delete this playlist?")) return;
-        const card = btn.closest(".yt-hub-playlist-card");
-        await chrome.runtime.sendMessage({ type: "delete_playlist", id: Number(card?.dataset.id) });
-        loadPlaylists();
-      });
-    });
-
-    // Add to playlist buttons on tracked items
-    hub.querySelectorAll(".yt-hub-item.tracked").forEach((item) => {
-      const existing = item.querySelector(".yt-hub-add-pl");
-      if (existing) return;
-      const btn = document.createElement("button");
-      btn.className = "yt-hub-add-pl";
-      btn.title = "Add to playlist";
-      btn.textContent = "+";
-      btn.addEventListener("click", async (e) => {
-        e.stopPropagation();
-        const d = hubTracked.find((x) => String(x.id) === item.dataset.id);
-        if (!d) return;
-        if (playlists.length === 0) {
-          alert("Create a playlist first");
-          return;
-        }
-        const names = playlists.map((p, i) => `${i + 1}. ${p.name}`).join("\n");
-        const choice = prompt(`Add to playlist (enter number):\n${names}`);
-        const idx = parseInt(choice) - 1;
-        if (idx >= 0 && idx < playlists.length) {
-          const pl = playlists[idx];
-          pl.items = pl.items || [];
-          pl.items.push({
-            url: d.url, title: d.title, quality: d.quality,
-            download_type: d.download_type, file_path: d.file_path,
-          });
-          await chrome.runtime.sendMessage({ type: "save_playlist", name: pl.name, items: pl.items });
-          await chrome.runtime.sendMessage({ type: "delete_playlist", id: pl.id });
-          loadPlaylists();
-        }
-      });
-      item.querySelector(".yt-hub-item-inner")?.appendChild(btn);
-    });
+    setSafeHtml(grid, html);
   }
 
   // ── Hook: Download button on video page ──
   function hookDownloadButton() {
     if (!isVideoPage()) return;
-    if (document.getElementById(HOOK_BTN_ID)) return;
-    const row = document.querySelector("#top-level-buttons-computed") ||
-      document.querySelector("ytd-menu-renderer.style-scope.ytd-watch-metadata #top-level-buttons-computed") ||
-      document.querySelector("#menu-container ytd-menu-renderer #top-level-buttons-computed") ||
-      document.querySelector("#above-the-fold #menu-container");
-    if (!row) return;
+    const existing = document.getElementById(HOOK_BTN_ID);
+    if (existing && existing.isConnected) return;
+    if (existing) existing.remove();
+
+    // Find the exact like button container or actions row
+    const likeBtn = document.querySelector("segmented-like-dislike-button-view-model, #segmented-like-button, ytd-segmented-like-dislike-button-renderer");
+    const topButtons = document.querySelector("#top-level-buttons-computed, ytd-menu-renderer.ytd-watch-metadata #top-level-buttons-computed, #menu-container #top-level-buttons-computed");
+    const actionsRow = document.querySelector("ytd-watch-metadata #actions ytd-menu-renderer, #above-the-fold #actions, #above-the-fold #menu-container");
+
+    let targetParent = null;
+    let insertBeforeEl = null;
+
+    if (likeBtn && likeBtn.parentElement) {
+      targetParent = likeBtn.parentElement;
+      insertBeforeEl = likeBtn;
+    } else if (topButtons) {
+      targetParent = topButtons;
+      insertBeforeEl = topButtons.firstChild;
+    } else if (actionsRow) {
+      targetParent = actionsRow;
+      insertBeforeEl = actionsRow.firstChild;
+    }
+
+    if (!targetParent) return;
 
     const btn = document.createElement("button");
     btn.id = HOOK_BTN_ID;
@@ -828,20 +772,25 @@ body{background:#0f0f0f;color:#f1f1f1;font-family:"Roboto","Arial",sans-serif}
       ensureOverlay();
       const vid = getVideoId();
       if (vid) document.querySelector(".yt-thumb").src = `https://i.ytimg.com/vi/${vid}/hqdefault.jpg`;
-      const titleEl = document.querySelector("h1.ytd-watch-metadata, #above-the-fold #title yt-formatted-string");
+      const titleEl = document.querySelector("h1.ytd-watch-metadata, #above-the-fold #title yt-formatted-string, #above-the-fold h1 yt-formatted-string");
       if (titleEl) document.querySelector(".yt-title").textContent = titleEl.textContent.trim();
       const dur = document.querySelector(".ytp-time-duration");
       if (dur) document.querySelector(".yt-detail").textContent = dur.textContent;
       document.getElementById(OVERLAY_ID).classList.add("visible");
     });
-    row.insertBefore(btn, row.firstChild);
+
+    targetParent.insertBefore(btn, insertBeforeEl);
   }
 
   // ── Hook: Hub button in sidebar ──
   function hookHubButton() {
-    if (document.getElementById(HUB_BTN_ID)) return;
-    const nav = document.querySelector("#guide-inner-content ytd-guide-entry-renderer:last-child");
+    const existing = document.getElementById(HUB_BTN_ID);
+    if (existing && existing.isConnected) return;
+    if (existing) existing.remove();
+
+    const nav = document.querySelector("#guide-inner-content ytd-guide-entry-renderer:last-child, #sections ytd-guide-entry-renderer:last-child");
     if (!nav) return;
+
     const btn = document.createElement("div");
     btn.id = HUB_BTN_ID;
     setSafeHtml(btn, `<a class="yt-simple-endpoint style-scope ytd-guide-entry-renderer" tabindex="0"><tp-yt-paper-item class="style-scope ytd-guide-entry-renderer" tabindex="0"><div class="guide-entry-maker style-scope ytd-guide-entry-renderer" title="Downloads Hub"><yt-formatted-string class="style-scope ytd-guide-entry-renderer">⬇ Hub</yt-formatted-string></div></tp-yt-paper-item></a>`);
@@ -854,47 +803,21 @@ body{background:#0f0f0f;color:#f1f1f1;font-family:"Roboto","Arial",sans-serif}
     nav.parentNode.insertBefore(btn, nav.nextSibling);
   }
 
-  // ── Hook: YouTube downloads page section ──
-  function hookDownloadsPageSection() {
-    if (!isDownloadsPage()) return;
-    if (document.getElementById("yourtube-dl-section")) return;
-    const renderer = document.querySelector("ytd-browse, ytd-section-list-renderer, #contents");
-    if (!renderer) return;
-
-    const section = document.createElement("div");
-    section.id = "yourtube-dl-section";
-    section.className = "yourtube-dl-section";
-    setSafeHtml(section, `
-      <div class="yourtube-dl-header"><h2>YourTube</h2><button class="yourtube-dl-open-hub">Open Hub</button></div>
-      <div class="yourtube-dl-body">
-        <p>Download videos directly from YouTube using YourTube.</p>
-        <div class="yourtube-dl-actions">
-          <button class="yourtube-dl-overlay-btn">Quick Download</button>
-          <button class="yourtube-dl-hub-btn">Browse Downloads</button>
-        </div>
-      </div>
-    `);
-    const contents = renderer.querySelector("#contents") || renderer;
-    contents.insertBefore(section, contents.firstChild);
-
-    section.querySelector(".yourtube-dl-overlay-btn").addEventListener("click", () => { ensureOverlay(); document.getElementById(OVERLAY_ID).classList.add("visible"); });
-    section.querySelector(".yourtube-dl-hub-btn").addEventListener("click", () => { ensureHub(); document.getElementById(HUB_ID).classList.add("visible"); });
-    section.querySelector(".yourtube-dl-open-hub").addEventListener("click", () => { ensureHub(); document.getElementById(HUB_ID).classList.add("visible"); });
-  }
-
-  // ── Observer ──
+  // ── Observer & Listeners ──
   const observer = new MutationObserver(() => {
     if (isVideoPage()) { hookDownloadButton(); }
-    else {
-      const btn = document.getElementById(HOOK_BTN_ID); if (btn) btn.remove();
-      const o = document.getElementById(OVERLAY_ID); if (o) o.classList.remove("visible");
-    }
-    if (isDownloadsPage()) hookDownloadsPageSection();
     hookHubButton();
   });
 
   observer.observe(document.body, { childList: true, subtree: true });
+
+  window.addEventListener("yt-navigate-finish", () => {
+    setTimeout(() => {
+      hookDownloadButton();
+      hookHubButton();
+    }, 500);
+  });
+
   hookDownloadButton();
   hookHubButton();
-  hookDownloadsPageSection();
 })();

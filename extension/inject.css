@@ -1,31 +1,38 @@
-* {
-  border-radius: 0 !important;
-}
-
-#yourtube-overlay {
+#yourtube-overlay,
+#yourtube-hub,
+#yourtube-video-popup {
   display: none;
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.7);
-  z-index: 999999;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  z-index: 9999999;
   justify-content: center;
   align-items: center;
-  font-family: Roboto, Arial, sans-serif;
+  font-family: "Roboto", Arial, sans-serif;
+  box-sizing: border-box;
 }
-#yourtube-overlay.visible {
+
+#yourtube-overlay.visible,
+#yourtube-hub.visible,
+#yourtube-video-popup.visible {
   display: flex;
 }
 
+/* ══════════════════════════════════════════
+   Download Popup (Overlay)
+   ══════════════════════════════════════════ */
 #yourtube-popup {
   background: #212121;
-  border-radius: 12px;
-  width: 400px;
-  max-height: 85vh;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  width: 440px;
+  max-height: 88vh;
   overflow-y: auto;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
   color: #f1f1f1;
 }
 
@@ -34,62 +41,84 @@
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
+
 #yourtube-popup .yt-header h2 {
-  font-size: 16px;
-  font-weight: 500;
+  font-size: 17px;
+  font-weight: 600;
   margin: 0;
+  color: #fff;
 }
+
 #yourtube-popup .yt-header .yt-close {
   background: none;
   border: none;
   color: #aaa;
-  font-size: 22px;
+  font-size: 24px;
   cursor: pointer;
-  padding: 0 4px;
+  padding: 0 6px;
   line-height: 1;
+  border-radius: 50%;
+  transition: all 0.15s;
 }
+
 #yourtube-popup .yt-header .yt-close:hover {
   color: #fff;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 #yourtube-popup .yt-body {
-  padding: 16px 20px;
+  padding: 18px 20px;
 }
 
 #yourtube-popup .yt-video-info {
   display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 14px;
+  margin-bottom: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 10px;
+  border-radius: 10px;
 }
+
 #yourtube-popup .yt-video-info img {
   width: 120px;
   height: 68px;
-  border-radius: 6px;
+  border-radius: 8px;
   object-fit: cover;
   background: #333;
 }
+
 #yourtube-popup .yt-video-info .yt-meta {
   flex: 1;
+  min-width: 0;
 }
+
 #yourtube-popup .yt-video-info .yt-title {
   font-size: 13px;
   font-weight: 500;
-  line-height: 1.3;
+  line-height: 1.4;
   margin-bottom: 4px;
+  color: #fff;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
+
 #yourtube-popup .yt-video-info .yt-detail {
   font-size: 11px;
   color: #aaa;
 }
 
 #yourtube-popup .yt-section {
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
+
 #yourtube-popup .yt-section > label {
   display: block;
   font-size: 11px;
+  font-weight: 600;
   color: #aaa;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -98,85 +127,97 @@
 
 #yourtube-popup .yt-radios {
   display: flex;
-  gap: 4px;
+  gap: 6px;
 }
+
 #yourtube-popup .yt-radios label {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
   padding: 8px 0;
-  border-radius: 8px;
-  background: #1a1a1a;
-  border: 1px solid #333;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid transparent;
   font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
+  color: #ccc;
 }
+
 #yourtube-popup .yt-radios label:hover {
-  border-color: #555;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
 }
+
 #yourtube-popup .yt-radios input[type="radio"] {
   display: none;
 }
-#yourtube-popup .yt-radios input[type="radio"]:checked + span {
-  color: #ff4444;
-}
+
 #yourtube-popup .yt-radios label:has(input:checked) {
   border-color: #ff4444;
-  background: #2a1010;
+  background: rgba(255, 68, 68, 0.15);
+  color: #ff6666;
 }
 
 #yourtube-popup select,
 #yourtube-popup input[type="text"] {
   width: 100%;
-  padding: 8px 10px;
-  border-radius: 6px;
-  border: 1px solid #333;
-  background: #1a1a1a;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: #181818;
   color: #f1f1f1;
   font-size: 13px;
   outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
 }
+
 #yourtube-popup select:focus,
 #yourtube-popup input[type="text"]:focus {
   border-color: #ff4444;
 }
 
+/* Custom Checkbox */
 #yourtube-popup .yt-checkbox {
   display: flex;
   align-items: center;
   gap: 10px;
   font-size: 13px;
   cursor: pointer;
-  padding: 6px 0;
+  padding: 4px 0;
+  color: #ddd;
 }
+
 #yourtube-popup .yt-checkbox input[type="checkbox"] {
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
   width: 18px;
   height: 18px;
-  border: 2px solid #555;
+  border: 2px solid #666;
   border-radius: 4px;
-  background: #1a1a1a;
+  background: #181818;
   cursor: pointer;
   position: relative;
   flex-shrink: 0;
   transition: all 0.15s;
 }
+
 #yourtube-popup .yt-checkbox input[type="checkbox"]:checked {
   background: #ff4444;
   border-color: #ff4444;
 }
+
 #yourtube-popup .yt-checkbox input[type="checkbox"]:checked::after {
   content: "";
   position: absolute;
   left: 5px;
   top: 1px;
-  width: 5px;
-  height: 10px;
+  width: 4px;
+  height: 9px;
   border: solid #fff;
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
@@ -187,22 +228,41 @@
   align-items: center;
   gap: 8px;
 }
+
 #yourtube-popup .yt-time-range input {
   flex: 1;
-  padding: 8px 10px;
-  border-radius: 6px;
-  border: 1px solid #333;
-  background: #1a1a1a;
-  color: #f1f1f1;
-  font-size: 13px;
-  outline: none;
 }
-#yourtube-popup .yt-time-range input:focus {
-  border-color: #ff4444;
-}
+
 #yourtube-popup .yt-time-range span {
-  color: #aaa;
+  color: #888;
   font-size: 12px;
+}
+
+#yourtube-popup .yt-path-row {
+  display: flex;
+  gap: 8px;
+}
+
+#yourtube-popup .yt-path-row input {
+  flex: 1;
+}
+
+#yourtube-popup .yt-browse-btn {
+  padding: 9px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: #2a2a2a;
+  color: #f1f1f1;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+#yourtube-popup .yt-browse-btn:hover {
+  border-color: #ff4444;
+  background: rgba(255, 68, 68, 0.15);
 }
 
 #yourtube-popup .yt-download-btn {
@@ -213,72 +273,57 @@
   background: #f1f1f1;
   color: #0f0f0f;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
+  margin-top: 8px;
   transition: background 0.15s;
 }
+
 #yourtube-popup .yt-download-btn:hover {
-  background: #e0e0e0;
+  background: #fff;
 }
+
 #yourtube-popup .yt-download-btn:disabled {
   background: #333;
   color: #666;
   cursor: not-allowed;
 }
 
-/* Path row with Browse button */
-#yourtube-popup .yt-path-row {
-  display: flex;
-  gap: 6px;
-}
-#yourtube-popup .yt-path-row input {
-  flex: 1;
-}
-#yourtube-popup .yt-browse-btn {
-  padding: 8px 14px;
-  border-radius: 6px;
-  border: 1px solid #555;
-  background: #2a2a2a;
-  color: #f1f1f1;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-}
-#yourtube-popup .yt-browse-btn:hover {
-  border-color: #ff4444;
-  background: #3a1515;
-}
-
 #yourtube-popup .yt-status {
   margin-top: 12px;
   padding: 10px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 12px;
   line-height: 1.5;
   white-space: pre-wrap;
   display: none;
 }
+
 #yourtube-popup .yt-status.visible {
   display: block;
 }
+
 #yourtube-popup .yt-status.error {
-  background: #2a1010;
+  background: rgba(255, 68, 68, 0.15);
   border: 1px solid #ff4444;
-  color: #ff6666;
+  color: #ff8888;
 }
+
 #yourtube-popup .yt-status.success {
-  background: #102a10;
+  background: rgba(68, 255, 68, 0.15);
   border: 1px solid #44ff44;
-  color: #66ff66;
+  color: #88ff88;
 }
+
 #yourtube-popup .yt-status.loading {
-  background: #1a1a1a;
-  border: 1px solid #444;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: #aaa;
 }
 
-/* Hook button near YouTube's action buttons */
+/* ══════════════════════════════════════════
+   Hook Button (On YouTube Watch Page)
+   ══════════════════════════════════════════ */
 #yourtube-hook-btn {
   background: rgba(255, 255, 255, 0.1);
   color: #f1f1f1;
@@ -290,49 +335,65 @@
   font-weight: 500;
   cursor: pointer;
   font-family: "Roboto", "Arial", sans-serif;
-  margin-right: 8px; /* Margin right since we insert BEFORE the like button */
-  display: flex;
+  margin-right: 8px;
+  display: inline-flex;
   align-items: center;
   transition: background 0.2s;
+  flex-shrink: 0;
+  vertical-align: middle;
 }
+
 #yourtube-hook-btn:hover {
   background: rgba(255, 255, 255, 0.2);
 }
 
-/* Download progress toast */
+/* ══════════════════════════════════════════
+   Download Toast Progress
+   ══════════════════════════════════════════ */
 #yourtube-toast {
   position: fixed;
   bottom: 24px;
   right: 24px;
   background: #212121;
-  border: 1px solid #333;
-  border-radius: 8px;
-  padding: 12px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 14px 18px;
   color: #f1f1f1;
-  font-family: Roboto, Arial, sans-serif;
+  font-family: "Roboto", Arial, sans-serif;
   font-size: 13px;
   z-index: 999998;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
   display: none;
-  min-width: 280px;
+  min-width: 300px;
 }
+
 #yourtube-toast.visible {
   display: block;
 }
+
+#yourtube-toast .toast-title {
+  font-weight: 500;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 #yourtube-toast .toast-progress {
-  height: 3px;
+  height: 4px;
   background: #333;
   border-radius: 2px;
-  margin-top: 8px;
   overflow: hidden;
+  margin-top: 8px;
 }
+
 #yourtube-toast .toast-bar {
   height: 100%;
-  background: #ff0000;
+  background: #ff4444;
   width: 0%;
-  transition: width 0.3s;
-  border-radius: 2px;
+  transition: width 0.2s;
 }
+
 #yourtube-toast .toast-details {
   display: flex;
   justify-content: space-between;
@@ -341,31 +402,18 @@
   color: #aaa;
 }
 
-/* ── Downloads Hub ── */
-#yourtube-hub {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.7);
-  z-index: 999999;
-  justify-content: center;
-  align-items: center;
-  font-family: Roboto, Arial, sans-serif;
-}
-#yourtube-hub.visible {
-  display: flex;
-}
-
+/* ══════════════════════════════════════════
+   Downloads Hub (YouTube Homepage Style)
+   ══════════════════════════════════════════ */
 .yt-hub-panel {
-  background: #212121;
-  border-radius: 12px;
-  width: 520px;
-  max-height: 85vh;
+  background: #0f0f0f;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  width: 860px;
+  max-width: 94vw;
+  max-height: 88vh;
   overflow: hidden;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.8);
   color: #f1f1f1;
   display: flex;
   flex-direction: column;
@@ -375,89 +423,121 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid #333;
+  padding: 16px 24px;
+  border-bottom: 1px solid #222;
+  background: #161616;
 }
+
 .yt-hub-header h2 {
-  font-size: 16px;
-  font-weight: 500;
+  font-size: 18px;
+  font-weight: 600;
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
+
 .yt-hub-header .yt-hub-close {
   background: none;
   border: none;
   color: #aaa;
-  font-size: 22px;
+  font-size: 24px;
   cursor: pointer;
-  padding: 0 4px;
+  padding: 0 6px;
   line-height: 1;
+  border-radius: 50%;
+  transition: all 0.15s;
 }
+
 .yt-hub-header .yt-hub-close:hover {
   color: #fff;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .yt-hub-settings {
-  padding: 12px 20px;
-  border-bottom: 1px solid #333;
+  padding: 12px 24px;
+  border-bottom: 1px solid #222;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #121212;
 }
-.yt-hub-settings > label {
-  display: block;
-  font-size: 11px;
-  color: #aaa;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 6px;
-}
+
 .yt-hub-folder {
   display: flex;
+  flex: 1;
   gap: 8px;
 }
+
 .yt-hub-folder input {
   flex: 1;
-  padding: 8px 10px;
-  border-radius: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
   border: 1px solid #333;
-  background: #1a1a1a;
+  background: #181818;
   color: #f1f1f1;
   font-size: 13px;
   outline: none;
 }
+
 .yt-hub-folder input:focus {
   border-color: #ff4444;
 }
+
 .yt-hub-folder .yt-hub-refresh {
-  padding: 8px 14px;
-  border-radius: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
   border: 1px solid #333;
-  background: #1a1a1a;
+  background: #202020;
   color: #f1f1f1;
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
   transition: all 0.15s;
 }
+
 .yt-hub-folder .yt-hub-refresh:hover {
   border-color: #ff4444;
-  background: #2a1010;
+  background: rgba(255, 68, 68, 0.15);
+}
+
+.yt-hub-search-box {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #333;
+  background: #181818;
+  color: #f1f1f1;
+  font-size: 13px;
+  outline: none;
+  width: 200px;
+}
+
+.yt-hub-search-box:focus {
+  border-color: #ff4444;
 }
 
 .yt-hub-tabs {
   display: flex;
-  padding: 0 20px;
-  border-bottom: 1px solid #333;
+  padding: 0 24px;
+  border-bottom: 1px solid #222;
+  background: #121212;
 }
+
 .yt-hub-tab {
-  padding: 10px 16px;
+  padding: 12px 18px;
   border: none;
   border-bottom: 2px solid transparent;
   background: none;
   color: #aaa;
   font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
 }
+
 .yt-hub-tab:hover {
   color: #f1f1f1;
 }
+
 .yt-hub-tab.active {
   color: #ff4444;
   border-bottom-color: #ff4444;
@@ -466,292 +546,130 @@
 .yt-hub-content {
   flex: 1;
   overflow-y: auto;
-  padding: 8px 0;
-  max-height: 50vh;
+  padding: 16px 24px;
+  max-height: 55vh;
 }
 
-.yt-hub-list.hidden,
-.yt-hub-empty.hidden {
-  display: none;
+.yt-hub-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
 }
 
-.yt-hub-item {
-  padding: 8px 20px;
-  cursor: pointer;
-  transition: background 0.1s;
-}
-.yt-hub-item:hover {
-  background: #272727;
-}
-
-.yt-hub-item-inner {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.yt-hub-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  background: #272727;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  flex-shrink: 0;
-}
-
-.yt-hub-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.yt-hub-name {
-  font-size: 13px;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.yt-hub-meta {
-  font-size: 11px;
-  color: #aaa;
-  margin-top: 2px;
-}
-
-.yt-hub-loading,
-.yt-hub-error,
-.yt-hub-empty {
-  padding: 24px 20px;
-  text-align: center;
-  font-size: 13px;
-  color: #aaa;
-}
-
-.yt-hub-error {
-  color: #ff6666;
-}
-
-.yt-hub-item.tracked .yt-hub-icon {
-  font-size: 14px;
-}
-
-/* ── Hub nav button ── */
-#yourtube-hub-btn {
-  cursor: pointer;
-}
-#yourtube-hub-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-/* Hub header actions */
-.yt-hub-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-/* Open mode toggle */
-.yt-hub-toggle {
-  display: flex;
-  border-radius: 6px;
-  overflow: hidden;
-  border: 1px solid #333;
-}
-.yt-hub-mode {
-  padding: 4px 10px;
-  border: none;
+.yt-hub-card {
   background: #1a1a1a;
-  color: #aaa;
-  font-size: 11px;
+  border-radius: 12px;
+  overflow: hidden;
   cursor: pointer;
-  transition: all 0.15s;
-}
-.yt-hub-mode:hover {
-  color: #f1f1f1;
-}
-.yt-hub-mode.active {
-  background: #ff4444;
-  color: #fff;
+  transition: transform 0.15s, background 0.15s;
+  border: 1px solid #272727;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Play button on items */
-.yt-hub-play {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(255,255,255,0.1);
-  color: #f1f1f1;
-  font-size: 14px;
-  cursor: pointer;
-  flex-shrink: 0;
+.yt-hub-card:hover {
+  transform: translateY(-2px);
+  background: #242424;
+  border-color: #383838;
+}
+
+.yt-hub-card-thumb {
+  position: relative;
+  width: 100%;
+  height: 135px;
+  background: #111;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s;
-  opacity: 0;
-}
-.yt-hub-item:hover .yt-hub-play,
-.yt-hub-item:hover .yt-hub-play-btn {
-  opacity: 1;
-}
-.yt-hub-play:hover,
-.yt-hub-play-btn:hover {
-  background: #ff4444;
+  overflow: hidden;
 }
 
-.yt-hub-play-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(255,255,255,0.1);
-  color: #f1f1f1;
-  font-size: 14px;
-  cursor: pointer;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s;
-  opacity: 0;
+.yt-hub-card-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
-.yt-hub-empty-inline {
-  padding: 20px;
-  text-align: center;
-  font-size: 13px;
+.yt-hub-card-thumb .yt-card-icon {
+  font-size: 36px;
   color: #555;
 }
 
-/* Video popup player */
-#yourtube-video-popup {
-  display: flex;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+.yt-hub-card-thumb .yt-card-badge {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
   background: rgba(0, 0, 0, 0.85);
-  z-index: 9999999;
-  justify-content: center;
-  align-items: center;
-}
-.yt-video-popup-panel {
-  background: #0f0f0f;
-  border-radius: 12px;
-  overflow: hidden;
-  width: 80vw;
-  max-width: 960px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
-}
-.yt-video-popup-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  background: #1a1a1a;
-  color: #f1f1f1;
-  font-size: 13px;
-  font-weight: 500;
-}
-.yt-video-popup-close {
-  background: none;
-  border: none;
-  color: #aaa;
-  font-size: 20px;
-  cursor: pointer;
-  line-height: 1;
-}
-.yt-video-popup-close:hover {
   color: #fff;
-}
-.yt-video-popup-panel video {
-  width: 100%;
-  display: block;
-  max-height: 75vh;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
-/* ── YouTube Downloads Page Section ── */
-.yourtube-dl-section {
-  background: #212121;
-  border-radius: 12px;
-  margin: 16px 0;
+.yt-hub-card-body {
+  padding: 12px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.yt-hub-card-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #fff;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
+  margin-bottom: 6px;
 }
 
-.yourtube-dl-header {
+.yt-hub-card-meta {
+  font-size: 11px;
+  color: #aaa;
+  margin-top: auto;
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid #333;
 }
 
-.yourtube-dl-header h2 {
-  font-size: 16px;
-  font-weight: 500;
-  margin: 0;
-  color: #f1f1f1;
-}
-
-.yourtube-dl-open-hub {
-  padding: 6px 14px;
-  border-radius: 6px;
-  border: 1px solid #333;
-  background: #1a1a1a;
-  color: #f1f1f1;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.yourtube-dl-open-hub:hover {
-  border-color: #ff4444;
-  background: #2a1010;
-}
-
-.yourtube-dl-body {
-  padding: 16px 20px;
-  color: #aaa;
-  font-size: 13px;
-}
-
-.yourtube-dl-actions {
+.yt-hub-card-actions {
   display: flex;
-  gap: 10px;
-  margin-top: 12px;
+  gap: 6px;
+  margin-top: 10px;
 }
 
-.yourtube-dl-overlay-btn,
-.yourtube-dl-hub-btn {
-  padding: 8px 16px;
+.yt-hub-card-play-btn {
+  flex: 1;
+  padding: 6px 0;
   border-radius: 6px;
   border: none;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.yourtube-dl-overlay-btn {
   background: #f1f1f1;
   color: #0f0f0f;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
 }
 
-.yourtube-dl-overlay-btn:hover {
-  background: #e0e0e0;
+.yt-hub-card-play-btn:hover {
+  background: #fff;
 }
 
-.yourtube-dl-hub-btn {
-  background: #1a1a1a;
-  border: 1px solid #333;
-  color: #f1f1f1;
+.yt-hub-empty,
+.yt-hub-loading,
+.yt-hub-error {
+  padding: 40px 20px;
+  text-align: center;
+  font-size: 14px;
+  color: #888;
 }
 
-.yourtube-dl-hub-btn:hover {
-  border-color: #ff4444;
-  background: #2a1010;
+.yt-hub-error {
+  color: #ff8888;
+}
+
+.hidden {
+  display: none !important;
 }
