@@ -66,6 +66,18 @@ pub async fn install() -> Result<()> {
 
     #[cfg(not(windows))]
     {
+        // Clean up any stale/broken root manifests in /usr/lib
+        let stale_system_manifests = [
+            PathBuf::from("/usr/lib/mozilla/native-messaging-hosts/com.yourtube.client.json"),
+            PathBuf::from("/usr/lib64/mozilla/native-messaging-hosts/com.yourtube.client.json"),
+            PathBuf::from("/etc/opt/chrome/native-messaging-hosts/com.yourtube.client.json"),
+            PathBuf::from("/etc/chromium/native-messaging-hosts/com.yourtube.client.json"),
+        ];
+        for stale in &stale_system_manifests {
+            let _ = fs::remove_file(stale);
+        }
+
+        // Install to user directories
         for home in &target_homes {
             let install_dir = home.join(".local").join("bin");
             let _ = fs::create_dir_all(&install_dir);
@@ -94,17 +106,27 @@ pub async fn install() -> Result<()> {
             install_single_home_manifests(&bin_path_str, home)?;
         }
 
-        // Also if root, install to /usr/local/bin
-        if let Ok(uid) = std::env::var("UID") {
-            if uid == "0" || std::env::var("SUDO_USER").is_ok() {
-                let usr_local_bin = PathBuf::from("/usr/local/bin");
-                if usr_local_bin.is_dir() {
-                    let global_client = usr_local_bin.join(&client_name);
-                    let _ = fs::copy(&client_exe, &global_client);
+        // Also if running with sudo/root, copy to /usr/local/bin so any user can run it globally
+        let usr_local_bin = PathBuf::from("/usr/local/bin");
+        if usr_local_bin.is_dir() {
+            let global_client = usr_local_bin.join(&client_name);
+            if fs::copy(&client_exe, &global_client).is_ok() {
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::PermissionsExt;
+                    let _ = fs::set_permissions(&global_client, fs::Permissions::from_mode(0o755));
+                }
+            }
+
+            if let Some(first_home) = target_homes.first() {
+                let user_yt_dlp = first_home.join(".local").join("bin").join(&yt_dlp_name);
+                if user_yt_dlp.is_file() {
+                    let global_yt_dlp = usr_local_bin.join(&yt_dlp_name);
+                    let _ = fs::copy(&user_yt_dlp, &global_yt_dlp);
                     #[cfg(unix)]
                     {
                         use std::os::unix::fs::PermissionsExt;
-                        let _ = fs::set_permissions(&global_client, fs::Permissions::from_mode(0o755));
+                        let _ = fs::set_permissions(&global_yt_dlp, fs::Permissions::from_mode(0o755));
                     }
                 }
             }
@@ -153,11 +175,7 @@ fn install_single_home_manifests(binary_path: &str, home: &PathBuf) -> Result<()
   "description": "YourTube yt-dlp client",
   "path": "{}",
   "type": "stdio",
-  "allowed_extensions": [
-    "yourtube@shirushimori",
-    "yourtube1@shirushimori",
-    "{{yourtube@shirushimori}}"
-  ]
+  "allowed_extensions": ["yourtube@shirushimori"]
 }}"#,
         binary_path
     );
@@ -183,6 +201,7 @@ fn install_single_home_manifests(binary_path: &str, home: &PathBuf) -> Result<()
 
     let firefox_dirs = vec![
         home.join(".mozilla/native-messaging-hosts"),
+        home.join(".config/mozilla/firefox/native-messaging-hosts"),
         #[cfg(target_os = "macos")]
         home.join("Library/Application Support/Mozilla/NativeMessagingHosts"),
     ];
@@ -227,11 +246,7 @@ fn install_browser_manifests(binary_path: &str, target_homes: &[PathBuf]) -> Res
   "description": "YourTube yt-dlp client",
   "path": "{}",
   "type": "stdio",
-  "allowed_extensions": [
-    "yourtube@shirushimori",
-    "yourtube1@shirushimori",
-    "{{yourtube@shirushimori}}"
-  ]
+  "allowed_extensions": ["yourtube@shirushimori"]
 }}"#,
         binary_path
     );

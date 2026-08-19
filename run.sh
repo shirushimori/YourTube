@@ -31,8 +31,9 @@ echo "Running client installer..."
 echo ""
 echo "[2/3] Packaging extension..."
 cd "$SCRIPT_DIR/extension"
-zip -r ../yourtube-extension.zip * >/dev/null
-echo "  -> Extension packaged as $SCRIPT_DIR/yourtube-extension.zip"
+zip -r ../yourtube-extension-v2.zip * >/dev/null
+zip -r ../yourtube-extension.zip * >/dev/null 2>/dev/null || true
+echo "  -> Extension packaged as $SCRIPT_DIR/yourtube-extension-v2.zip"
 
 echo ""
 echo "=== Done ==="
