@@ -81,42 +81,76 @@
 
   loadSettings();
 
-  // ── Toast notification ──
-  function ensureToast() {
+  // ── Progress Widget ──
+  function ensureProgressWidget() {
     if (document.getElementById(TOAST_ID)) return;
-    const t = document.createElement("div");
-    t.id = TOAST_ID;
-    setSafeHtml(t, `
-      <div class="toast-title"></div>
-      <div class="toast-progress"><div class="toast-bar"></div></div>
-      <div class="toast-details"><span class="toast-pct">0%</span><span class="toast-speed"></span><span class="toast-eta"></span></div>
+    const w = document.createElement("div");
+    w.id = TOAST_ID; // Keeping the same ID constant for simplicity
+    w.className = "collapsed"; // Starts collapsed by default
+    setSafeHtml(w, `
+      <div class="widget-header">
+        <h3>Downloads</h3>
+        <button class="widget-toggle">▼</button>
+      </div>
+      <div class="widget-body"></div>
     `);
-    document.body.appendChild(t);
+    document.body.appendChild(w);
+
+    w.querySelector(".widget-header").addEventListener("click", () => {
+      w.classList.toggle("collapsed");
+    });
   }
 
-  function showToast(title) {
-    ensureToast();
-    const t = document.getElementById(TOAST_ID);
-    t.querySelector(".toast-title").textContent = title;
-    t.querySelector(".toast-bar").style.width = "0%";
-    t.querySelector(".toast-pct").textContent = "Starting...";
-    t.querySelector(".toast-speed").textContent = "";
-    t.querySelector(".toast-eta").textContent = "";
-    t.classList.add("visible");
+  function showToast(url, title) {
+    ensureProgressWidget();
+    const w = document.getElementById(TOAST_ID);
+    const body = w.querySelector(".widget-body");
+    
+    // Create or find item for this URL
+    let item = body.querySelector(`[data-url="${url}"]`);
+    if (!item) {
+      item = document.createElement("div");
+      item.className = "widget-item";
+      item.dataset.url = url;
+      setSafeHtml(item, `
+        <div class="widget-title">${title}</div>
+        <div class="widget-progress"><div class="widget-bar"></div></div>
+        <div class="widget-details"><span class="widget-pct">Starting...</span><span class="widget-speed"></span><span class="widget-eta"></span></div>
+      `);
+      body.appendChild(item);
+    }
+    
+    w.classList.add("visible");
+    w.classList.remove("collapsed"); // Auto-expand when a new download starts
   }
 
-  function updateToast(pct, speed, eta) {
-    const t = document.getElementById(TOAST_ID);
-    if (!t || !t.classList.contains("visible")) return;
-    t.querySelector(".toast-bar").style.width = `${pct}%`;
-    t.querySelector(".toast-pct").textContent = `${pct.toFixed(1)}%`;
-    if (speed) t.querySelector(".toast-speed").textContent = speed;
-    if (eta) t.querySelector(".toast-eta").textContent = `ETA ${eta}`;
+  function updateToast(url, pct, speed, eta) {
+    const w = document.getElementById(TOAST_ID);
+    if (!w) return;
+    const item = w.querySelector(`[data-url="${url}"]`);
+    if (!item) return;
+    
+    item.querySelector(".widget-bar").style.width = `${pct}%`;
+    item.querySelector(".widget-pct").textContent = `${pct.toFixed(1)}%`;
+    if (speed) item.querySelector(".widget-speed").textContent = speed;
+    if (eta) item.querySelector(".widget-eta").textContent = `ETA ${eta}`;
   }
 
-  function hideToast() {
-    const t = document.getElementById(TOAST_ID);
-    if (t) setTimeout(() => t.classList.remove("visible"), 3000);
+  function hideToast(url) {
+    const w = document.getElementById(TOAST_ID);
+    if (!w) return;
+    // Don't auto-hide immediately, maybe show "Done" and let user dismiss or auto-collapse
+    const item = w.querySelector(`[data-url="${url}"]`);
+    if (item) {
+      item.querySelector(".widget-pct").textContent = "Done";
+      item.querySelector(".widget-bar").style.background = "#4CAF50"; // Green color
+      setTimeout(() => {
+        if (item.parentNode) item.parentNode.removeChild(item);
+        if (w.querySelectorAll(".widget-item").length === 0) {
+          w.classList.remove("visible");
+        }
+      }, 5000);
+    }
   }
 
   // ── Overlay (Download popup on video page) ──
@@ -172,6 +206,7 @@
           </div>
           <div class="yt-section">
             <label class="yt-checkbox"><input type="checkbox" class="yt-playlist-check"><span>Download as playlist / album</span></label>
+            <label class="yt-checkbox" style="margin-top: 8px;"><input type="checkbox" class="yt-metadata-check" checked><span>Also download metadata & thumbnail</span></label>
           </div>
           <div class="yt-section yt-playlist-folder-section" style="display:none">
             <label>Playlist Folder Name</label>
@@ -231,6 +266,7 @@
     const audioFormat = overlay.querySelector(".yt-audio-format").value;
     const audioBitrate = overlay.querySelector(".yt-audio-quality").value;
     const isPlaylist = overlay.querySelector(".yt-playlist-check").checked;
+    const downloadMetadata = overlay.querySelector(".yt-metadata-check").checked;
     const playlistFolder = overlay.querySelector(".yt-playlist-folder").value.trim();
     const startTime = overlay.querySelector(".yt-start").value || null;
     const endTime = overlay.querySelector(".yt-end").value || null;
@@ -255,7 +291,7 @@
 
       status.className = "yt-status visible loading";
       status.textContent = "Starting download in highest quality...";
-      showToast(meta.title || "Downloading...");
+      showToast(url, meta.title || "Downloading...");
 
       chrome.runtime.sendMessage({
         type: "download_start",
@@ -276,6 +312,7 @@
         output_dir: outputDir,
         start_time: startTime,
         end_time: endTime,
+        download_metadata: downloadMetadata,
       });
     } catch (err) {
       status.className = "yt-status visible error";
@@ -290,8 +327,8 @@
     const status = document.querySelector("#yourtube-overlay .yt-status");
     if (msg.type === "download_progress") {
       const pct = msg.percent != null ? msg.percent : 0;
-      updateToast(pct, msg.speed, msg.eta);
-      if (status) {
+      updateToast(msg.url, pct, msg.speed, msg.eta);
+      if (status && OVERLAY_ID && document.getElementById(OVERLAY_ID).classList.contains("visible")) {
         const parts = [pct.toFixed(1) + "%"];
         if (msg.speed) parts.push(msg.speed);
         if (msg.eta) parts.push("ETA " + msg.eta);
@@ -301,11 +338,11 @@
       }
       if (msg.status === "finished" || msg.status === "completed") {
         if (status) { status.className = "yt-status visible success"; status.textContent = "Done! Download complete."; }
-        hideToast();
+        hideToast(msg.url);
       }
     } else if (msg.type === "error") {
       if (status) { status.className = "yt-status visible error"; status.textContent = msg.message || "Failed"; }
-      hideToast();
+      hideToast(msg.url);
     }
   });
 
@@ -515,7 +552,7 @@
         return;
       }
 
-      openCustomPlayerTab(result.url, name, meta);
+      openCustomPlayerTab(result.url, name, meta, path);
     } catch (err) {
       if (playBtn) { playBtn.disabled = false; playBtn.textContent = "▶ Watch in Player"; }
       alert("Error: " + err.message);
@@ -525,11 +562,15 @@
   // ══════════════════════════════════════════
   // ── Custom Video Player Tab
   // ══════════════════════════════════════════
-  function openCustomPlayerTab(streamUrl, name, meta) {
+  function openCustomPlayerTab(streamUrl, name, meta, localPath) {
     const title = escapeHtml(meta?.title || name);
     const channel = meta?.channel ? escapeHtml(meta.channel) : "Local Video";
     const desc = meta?.description ? escapeHtml(meta.description) : "Downloaded locally via YourTube.";
-    const thumb = meta?.thumbnail || "";
+    const fallbackThumb = meta?.thumbnail || "";
+    
+    // Construct possible local thumbnail URLs
+    const localJpg = localPath ? `http://127.0.0.1:48821/serve?path=${encodeURIComponent(localPath.replace(/\.[^/.]+$/, ".jpg"))}` : "";
+    const localWebp = localPath ? `http://127.0.0.1:48821/serve?path=${encodeURIComponent(localPath.replace(/\.[^/.]+$/, ".webp"))}` : "";
 
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -596,9 +637,9 @@ video{width:100%;display:block;max-height:76vh;background:#000;outline:none}
 <div class="watch-container">
   <div>
     <div class="player-wrapper">
-      <video id="vid-player" controls autoplay src="${streamUrl}"></video>
+      <video id="vid-player" controls autoplay src="${streamUrl}" poster="${localWebp || fallbackThumb}"></video>
       <div class="idle-overlay" id="idle-overlay">
-        ${thumb ? `<img class="idle-thumb" src="${thumb}" alt="">` : ""}
+        <img class="idle-thumb" src="${localWebp || fallbackThumb}" alt="" id="player-idle-thumb" style="display: ${localWebp || fallbackThumb ? 'block' : 'none'}">
         <div class="idle-title">${title}</div>
         <button class="idle-resume-btn" id="resume-btn">▶ Click to Resume</button>
       </div>
@@ -658,6 +699,24 @@ const resumeBtn = document.getElementById("resume-btn");
 const metaBtn = document.getElementById("open-meta-btn");
 const metaModal = document.getElementById("meta-modal");
 const closeMeta = document.getElementById("close-meta-btn");
+const idleThumb = document.getElementById("player-idle-thumb");
+
+// Fallback chain for thumbnail
+const localJpg = "${localJpg}";
+const fallbackThumb = "${fallbackThumb}";
+if (idleThumb) {
+  idleThumb.onerror = function() {
+    if (this.src.includes(".webp") && localJpg) {
+      this.src = localJpg;
+      video.poster = localJpg;
+    } else if (this.src !== fallbackThumb && fallbackThumb) {
+      this.src = fallbackThumb;
+      video.poster = fallbackThumb;
+    } else {
+      this.style.display = 'none';
+    }
+  };
+}
 
 let idleTimer = null;
 

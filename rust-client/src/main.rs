@@ -107,6 +107,7 @@ async fn run_native_messaging() -> Result<()> {
                         output_dir,
                         start_time,
                         end_time,
+                        download_metadata,
                     } => {
                         let req_id = id.clone();
                         let tx_progress = tx.clone();
@@ -127,6 +128,7 @@ async fn run_native_messaging() -> Result<()> {
                             output_dir.as_deref(),
                             start_time.as_deref(),
                             end_time.as_deref(),
+                            download_metadata,
                             progress_sender,
                         )
                         .await

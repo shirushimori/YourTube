@@ -44,6 +44,8 @@ pub enum Request {
         start_time: Option<String>,
         #[serde(default, alias = "endTime", skip_serializing_if = "Option::is_none")]
         end_time: Option<String>,
+        #[serde(default, alias = "downloadMetadata", skip_serializing_if = "Option::is_none")]
+        download_metadata: Option<bool>,
     },
     #[serde(alias = "listDownloads", alias = "list_downloads")]
     ListDownloads {

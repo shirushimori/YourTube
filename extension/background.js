@@ -220,6 +220,7 @@
         output_dir: msg.output_dir,
         start_time: msg.start_time,
         end_time: msg.end_time,
+        download_metadata: msg.download_metadata,
       });
 
       saveDownload({

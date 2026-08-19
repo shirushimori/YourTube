@@ -46,6 +46,7 @@ pub fn build_yt_dlp_args(
     output_dir: Option<&str>,
     start_time: Option<&str>,
     end_time: Option<&str>,
+    download_metadata: Option<bool>,
 ) -> Vec<String> {
     let mut args = vec![
         "--newline".to_string(),
@@ -130,6 +131,10 @@ pub fn build_yt_dlp_args(
         args.extend(["--download-sections".to_string(), sec]);
     }
 
+    if let Some(true) = download_metadata {
+        args.extend(["--write-info-json".to_string(), "--write-thumbnail".to_string()]);
+    }
+
     args.push(url.to_string());
     args
 }
@@ -144,6 +149,7 @@ pub async fn download<F, Fut>(
     output_dir: Option<&str>,
     start_time: Option<&str>,
     end_time: Option<&str>,
+    download_metadata: Option<bool>,
     mut on_progress: F,
 ) -> Result<()>
 where
@@ -160,6 +166,7 @@ where
         output_dir,
         start_time,
         end_time,
+        download_metadata,
     );
 
     let mut cmd = Command::new(&yt_dlp_bin);

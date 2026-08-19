@@ -348,56 +348,107 @@
 }
 
 /* ══════════════════════════════════════════
-   Download Toast Progress
+   Download Progress Widget
    ══════════════════════════════════════════ */
-#yourtube-toast {
+#yourtube-progress-widget {
   position: fixed;
   bottom: 24px;
   right: 24px;
   background: #212121;
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 12px;
-  padding: 14px 18px;
+  width: 320px;
   color: #f1f1f1;
   font-family: "Roboto", Arial, sans-serif;
   font-size: 13px;
   z-index: 999998;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
   display: none;
-  min-width: 300px;
+  flex-direction: column;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+  max-height: 400px;
 }
 
-#yourtube-toast.visible {
-  display: block;
+#yourtube-progress-widget.visible {
+  display: flex;
 }
 
-#yourtube-toast .toast-title {
+#yourtube-progress-widget.collapsed {
+  max-height: 48px;
+}
+
+#yourtube-progress-widget .widget-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+#yourtube-progress-widget .widget-header h3 {
+  margin: 0;
+  font-size: 14px;
   font-weight: 500;
-  margin-bottom: 6px;
+  color: #fff;
+}
+
+#yourtube-progress-widget .widget-toggle {
+  background: none;
+  border: none;
+  color: #aaa;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0;
+  transition: transform 0.3s ease;
+}
+
+#yourtube-progress-widget.collapsed .widget-toggle {
+  transform: rotate(180deg);
+}
+
+#yourtube-progress-widget .widget-body {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+#yourtube-progress-widget .widget-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+#yourtube-progress-widget .widget-title {
+  font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 12px;
 }
 
-#yourtube-toast .toast-progress {
+#yourtube-progress-widget .widget-progress {
   height: 4px;
   background: #333;
   border-radius: 2px;
   overflow: hidden;
-  margin-top: 8px;
 }
 
-#yourtube-toast .toast-bar {
+#yourtube-progress-widget .widget-bar {
   height: 100%;
   background: #ff4444;
   width: 0%;
   transition: width 0.2s;
 }
 
-#yourtube-toast .toast-details {
+#yourtube-progress-widget .widget-details {
   display: flex;
   justify-content: space-between;
-  margin-top: 6px;
   font-size: 11px;
   color: #aaa;
 }
