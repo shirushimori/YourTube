@@ -55,40 +55,63 @@ case "$ARCH" in
 esac
 
 # 2. Fetch latest release info
-echo "Fetching latest release information..."
+echo "Checking for pre-built binaries..."
 REPO="shirushimori/YourTube"
 LATEST_RELEASE_URL="https://api.github.com/repos/$REPO/releases/latest"
 
-# Try to find an asset that matches the OS and ARCH
-DOWNLOAD_URL=$(curl -sL "$LATEST_RELEASE_URL" | grep -o '"browser_download_url": "[^"]*"' | grep -i "$OS_NAME" | head -n 1 | cut -d '"' -f 4)
+DOWNLOAD_URL=$(curl -sL "$LATEST_RELEASE_URL" 2>/dev/null | grep -o '"browser_download_url": "[^"]*"' | grep -i "$OS_NAME" | head -n 1 | cut -d '"' -f 4 || true)
 
 if [ -z "$DOWNLOAD_URL" ]; then
-    # Fallback to the first asset if specific ones aren't found (assuming single linux binary uploaded)
     if [ "$OS_NAME" = "linux" ]; then
-        DOWNLOAD_URL=$(curl -sL "$LATEST_RELEASE_URL" | grep -o '"browser_download_url": "[^"]*"' | grep "yourtube-client" | head -n 1 | cut -d '"' -f 4)
-    fi
-
-    if [ -z "$DOWNLOAD_URL" ]; then
-        echo "Error: Could not find a pre-built binary in the latest release."
-        echo "Please build from source."
-        exit 1
+        DOWNLOAD_URL=$(curl -sL "$LATEST_RELEASE_URL" 2>/dev/null | grep -o '"browser_download_url": "[^"]*"' | grep "yourtube-client" | head -n 1 | cut -d '"' -f 4 || true)
     fi
 fi
 
-# 3. Download and install
-TMP_BIN="/tmp/yourtube-client"
-echo "Downloading YourTube client from: $DOWNLOAD_URL"
-curl -sSL "$DOWNLOAD_URL" -o "$TMP_BIN"
-chmod +x "$TMP_BIN"
+if [ -n "$DOWNLOAD_URL" ]; then
+    echo "Found pre-built binary: $DOWNLOAD_URL"
+    TMP_BIN="/tmp/yourtube-client"
+    curl -sSL "$DOWNLOAD_URL" -o "$TMP_BIN"
+    chmod +x "$TMP_BIN"
 
-echo "Installing client and registering browser manifests..."
-"$TMP_BIN" --install
+    echo "Installing client and registering browser manifests..."
+    "$TMP_BIN" --install
 
-# 4. Cleanup
-echo "Cleaning up..."
-rm -f "$TMP_BIN"
+    echo "Cleaning up..."
+    rm -f "$TMP_BIN"
+else
+    echo "Notice: Could not find a pre-built binary for your OS/Arch in GitHub Releases."
+    echo "Falling back to building from source..."
+    
+    if ! command -v git >/dev/null 2>&1; then
+      echo "Error: 'git' is not installed. Please install git first."
+      exit 1
+    fi
+
+    if ! command -v cargo >/dev/null 2>&1; then
+      echo "Rust is not installed. Installing Rust (cargo)..."
+      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+      source "$HOME/.cargo/env"
+    fi
+
+    TEMP_DIR=$(mktemp -d)
+    cd "$TEMP_DIR"
+
+    echo "Downloading source code..."
+    git clone --depth 1 https://github.com/shirushimori/YourTube.git
+    cd YourTube/rust-client
+
+    echo "Building client (this might take a minute)..."
+    cargo build --release
+
+    echo "Installing client and registering browser manifests..."
+    ./target/release/yourtube-client --install
+
+    echo "Cleaning up..."
+    cd "$HOME"
+    rm -rf "$TEMP_DIR"
+fi
 
 echo ""
 echo "=== Done! ==="
 echo "The native client is successfully installed."
-echo "You can now install the YourTube extension from the Firefox Add-on Store."
+echo "You can now use the YourTube extension."

@@ -28,7 +28,11 @@ Just run the one-liner for your OS to download the pre-built client and set up t
 ```bash
 curl -sSL https://raw.githubusercontent.com/shirushimori/YourTube/main/install.sh | bash
 ```
-*(To uninstall, simply run the same command with `--uninstall` at the end: `... | bash -s -- --uninstall`)*
+
+**To Uninstall (Linux / macOS):**
+```bash
+curl -sSL https://raw.githubusercontent.com/shirushimori/YourTube/main/install.sh | bash -s -- --uninstall
+```
 
 **Windows (PowerShell):**
 ```powershell
