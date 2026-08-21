@@ -22,12 +22,13 @@ I've put together an automated installer script that handles literally everythin
 
 ### 1. Setup the Native Client
 
-Make sure you have `git` and `cargo` (Rust) installed on your system. Then, just run the one-liner for your OS:
+Just run the one-liner for your OS to download the pre-built client and set up the browser manifests:
 
 **Linux / macOS (Terminal):**
 ```bash
-curl -sSf https://raw.githubusercontent.com/shirushimori/YourTube/main/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/shirushimori/YourTube/main/install.sh | bash
 ```
+*(To uninstall, simply run the same command with `--uninstall` at the end: `... | bash -s -- --uninstall`)*
 
 **Windows (PowerShell):**
 ```powershell
@@ -36,7 +37,7 @@ irm https://raw.githubusercontent.com/shirushimori/YourTube/main/install.ps1 | i
 
 ### 2. Install the Extension
 Once the setup script finishes, install the YourTube extension into your browser:
-- **Firefox:** Download from Mozilla Add-ons *(Link coming soon)*
+- **Firefox:** [Download from Mozilla Add-ons](https://addons.mozilla.org/en-US/firefox/addon/yourtube-a-youtube-addon/)
 - **Chrome / Brave / Edge:** Download the latest `yourtube-extension.zip` from the [GitHub Releases](https://github.com/shirushimori/YourTube/releases) page. Extract it, navigate to `chrome://extensions`, enable "Developer Mode", and click "Load unpacked" to select the extracted folder.
 
 ## 🎬 How to use it
