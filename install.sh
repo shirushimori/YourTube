@@ -1,6 +1,27 @@
 #!/usr/bin/env bash
 set -e
 
+if [ "${1:-}" = "--uninstall" ]; then
+    echo "=== Uninstalling YourTube Native Client ==="
+    echo "Removing binaries..."
+    rm -f ~/.local/bin/yourtube-client ~/.local/bin/yt-dlp
+    [ -f /usr/local/bin/yourtube-client ] && sudo rm -f /usr/local/bin/yourtube-client 2>/dev/null || true
+    [ -f /usr/local/bin/yt-dlp ] && sudo rm -f /usr/local/bin/yt-dlp 2>/dev/null || true
+
+    echo "Removing browser manifests..."
+    rm -f ~/.config/google-chrome/NativeMessagingHosts/com.yourtube.client.json
+    rm -f ~/.config/chromium/NativeMessagingHosts/com.yourtube.client.json
+    rm -f ~/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts/com.yourtube.client.json
+    rm -f ~/Library/Application\ Support/Google/Chrome/NativeMessagingHosts/com.yourtube.client.json 2>/dev/null || true
+    
+    rm -f ~/.mozilla/native-messaging-hosts/com.yourtube.client.json
+    rm -f ~/.config/mozilla/firefox/native-messaging-hosts/com.yourtube.client.json
+    rm -f ~/Library/Application\ Support/Mozilla/NativeMessagingHosts/com.yourtube.client.json 2>/dev/null || true
+
+    echo "Uninstall complete!"
+    exit 0
+fi
+
 echo "=== YourTube Native Client Installer ==="
 
 # 1. Detect OS and Architecture
