@@ -3,39 +3,71 @@ set -e
 
 echo "=== YourTube Native Client Installer ==="
 
-# 1. Check prerequisites
-if ! command -v git >/dev/null 2>&1; then
-  echo "Error: 'git' is not installed. Please install it first."
-  exit 1
+# 1. Detect OS and Architecture
+OS="$(uname -s)"
+ARCH="$(uname -m)"
+
+case "$OS" in
+  Linux)
+    OS_NAME="linux"
+    ;;
+  Darwin)
+    OS_NAME="macos"
+    ;;
+  *)
+    echo "Error: Unsupported OS $OS"
+    exit 1
+    ;;
+esac
+
+case "$ARCH" in
+  x86_64|amd64)
+    ARCH_NAME="amd64"
+    ;;
+  aarch64|arm64)
+    ARCH_NAME="arm64"
+    ;;
+  *)
+    echo "Error: Unsupported architecture $ARCH"
+    exit 1
+    ;;
+esac
+
+# 2. Fetch latest release info
+echo "Fetching latest release information..."
+REPO="shirushimori/YourTube"
+LATEST_RELEASE_URL="https://api.github.com/repos/$REPO/releases/latest"
+
+# Try to find an asset that matches the OS and ARCH
+DOWNLOAD_URL=$(curl -sL "$LATEST_RELEASE_URL" | grep -o '"browser_download_url": "[^"]*"' | grep -i "$OS_NAME" | head -n 1 | cut -d '"' -f 4)
+
+if [ -z "$DOWNLOAD_URL" ]; then
+    # Fallback to the first asset if specific ones aren't found (assuming single linux binary uploaded)
+    if [ "$OS_NAME" = "linux" ]; then
+        DOWNLOAD_URL=$(curl -sL "$LATEST_RELEASE_URL" | grep -o '"browser_download_url": "[^"]*"' | grep "yourtube-client" | head -n 1 | cut -d '"' -f 4)
+    fi
+
+    if [ -z "$DOWNLOAD_URL" ]; then
+        echo "Error: Could not find a pre-built binary in the latest release."
+        echo "Please build from source."
+        exit 1
+    fi
 fi
 
-if ! command -v cargo >/dev/null 2>&1; then
-  echo "Rust is not installed. Installing Rust (cargo)..."
-  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-  source "$HOME/.cargo/env"
-fi
-
-# 2. Clone into temp directory
-TEMP_DIR=$(mktemp -d)
-cd "$TEMP_DIR"
-
-echo "Downloading YourTube..."
-git clone --depth 1 https://github.com/shirushimori/YourTube.git
-cd YourTube/rust-client
-
-# 3. Build & Install
-echo "Building client..."
-cargo build --release
+# 3. Download and install
+TMP_BIN="/tmp/yourtube-client"
+echo "Downloading YourTube client from: $DOWNLOAD_URL"
+curl -sSL "$DOWNLOAD_URL" -o "$TMP_BIN"
+chmod +x "$TMP_BIN"
 
 echo "Installing client and registering browser manifests..."
-./target/release/yourtube-client --install
+"$TMP_BIN" --install
 
 # 4. Cleanup
 echo "Cleaning up..."
-cd "$HOME"
-rm -rf "$TEMP_DIR"
+rm -f "$TMP_BIN"
 
 echo ""
 echo "=== Done! ==="
 echo "The native client is successfully installed."
-echo "You can now install the YourTube extension from the Firefox Add-on Store or Chrome Web Store."
+echo "You can now install the YourTube extension from the Firefox Add-on Store."
