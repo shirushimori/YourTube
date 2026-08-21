@@ -316,7 +316,7 @@
       });
     } catch (err) {
       status.className = "yt-status visible error";
-      status.textContent = "Error: " + (err.message || "Unknown error");
+      status.textContent = "Error: " + (err.message || "Unknown error") + ". Tip: Run `./run.sh` in the YourTube folder to install the client.";
     }
 
     btn.disabled = false;
@@ -341,7 +341,7 @@
         hideToast(msg.url);
       }
     } else if (msg.type === "error") {
-      if (status) { status.className = "yt-status visible error"; status.textContent = msg.message || "Failed"; }
+      if (status) { status.className = "yt-status visible error"; status.textContent = (msg.message || "Failed") + ". Tip: Run `./run.sh` to install the client."; }
       hideToast(msg.url);
     }
   });
@@ -428,14 +428,14 @@
     try {
       const result = await chrome.runtime.sendMessage({ type: "list_downloads", directory: dir });
       if (!result || result.type === "error") {
-        setSafeHtml(grid, `<div class="yt-hub-error">${(result && result.message) || "Failed to load. Make sure YourTube native client is installed."}</div>`);
+        setSafeHtml(grid, `<div class="yt-hub-error">${(result && result.message) || "Failed to load. Make sure YourTube native client is installed via ./run.sh."}</div>`);
         return;
       }
 
       hubFileList = result.files || [];
       renderFileLists();
     } catch (err) {
-      setSafeHtml(grid, `<div class="yt-hub-error">Connection error: ${err.message || "Native client not found"}</div>`);
+      setSafeHtml(grid, `<div class="yt-hub-error">Connection error: ${err.message || "Native client not found"}. Tip: Run ./run.sh to install it.</div>`);
     }
   }
 

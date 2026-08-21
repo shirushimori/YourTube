@@ -51,7 +51,7 @@
           port.disconnect();
         }
       } else if (msg.type === "error") {
-        showStatus("error", msg.message || "Unknown error");
+        showStatus("error", (msg.message || "Unknown error") + ". Tip: Run `./run.sh` to install client.");
         goBtn.disabled = false;
         port.disconnect();
       }
@@ -60,7 +60,9 @@
     port.onDisconnect.addListener(() => {
       const err = chrome.runtime.lastError;
       if (err && err.message) {
-        showStatus("error", err.message);
+        showStatus("error", err.message + ". Tip: Run `./run.sh` to install client.");
+      } else {
+        showStatus("error", "Disconnected. Tip: Run `./run.sh` to install client.");
       }
       goBtn.disabled = false;
     });

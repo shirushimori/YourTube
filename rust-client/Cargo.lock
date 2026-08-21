@@ -1830,7 +1830,7 @@ dependencies = [
 
 [[package]]
 name = "yourtube-client"
-version = "0.2.0"
+version = "2.6.2"
 dependencies = [
  "anyhow",
  "crossterm",
