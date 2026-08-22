@@ -1,4 +1,4 @@
-NOTE : All setups, and docs are written by AI. still... it's good.
+NOTE : All setups, and docs are written by AI. still... it's good. **This Project Will not be maintained further...**
 
 <div align="center">
   <img src="docs/assets/icon.png" width="128" height="128" alt="YourTube Icon">
